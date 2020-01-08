@@ -49,14 +49,14 @@ class CreateFamilyCommand extends Command
         $this->io->writeln(sprintf('Creation of asset family "%s"...', $this->assetFamilyCode));
         $this->client->getAssetFamilyApi()->upsert($this->assetFamilyCode, [
             'code' => $this->assetFamilyCode,
-            'labels' => ['en_US' => 'foo'], // Need to set at least 1 label, else the UI fail :/
+            'labels' => ['en_US' => $this->assetFamilyCode], // TODO AST-239 Need to set at least 1 label, else the UI fail :/
         ]);
 
         $this->createAttribute('reference', 'media_file', false, false, false);
         $this->createAttribute('reference_localizable', 'media_file', true, false, false);
         $this->createAttribute('variation_scopable', 'media_file', false, true, false);
         $this->createAttribute('variation_localizable_scopable', 'media_file', true, true, false);
-        $this->createAttribute('description', 'media_file', true, true, false);
+        $this->createAttribute('description', 'text', false, false, false);
         $this->createAttribute('categories', 'text', false, false, false);
         $this->createAttribute('tags', 'text', false, false, false);
         $this->createAttribute('end_of_use', 'text', false, false, false);
@@ -74,12 +74,17 @@ class CreateFamilyCommand extends Command
     {
         $this->io->writeln(sprintf('Creation of attribute "%s"...', $attributeCode));
 
-        $this->client->getAssetAttributeApi()->upsert($this->assetFamilyCode,$attributeCode, [
+        $data = [
             'code' => $attributeCode,
             'type' => $type,
             'value_per_locale' => $localizable,
             'value_per_channel' => $scopable,
-            'is_required_for_completeness' => $required
-        ]);
+            'is_required_for_completeness' => $required,
+        ];
+        if ($type === 'media_file') {
+            $data['media_type'] = 'image';
+        }
+
+        $this->client->getAssetAttributeApi()->upsert($this->assetFamilyCode,$attributeCode, $data);
     }
 }
