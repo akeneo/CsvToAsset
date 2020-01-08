@@ -8,9 +8,6 @@
     "box/spout": {
         "version": "v2.7.3"
     },
-    "clue/stream-filter": {
-        "version": "v1.4.0"
-    },
     "doctrine/instantiator": {
         "version": "1.1.0"
     },
@@ -23,8 +20,14 @@
     "guzzlehttp/psr7": {
         "version": "1.5.2"
     },
+    "http-interop/http-factory-guzzle": {
+        "version": "1.0.0"
+    },
     "monolog/monolog": {
         "version": "1.24.0"
+    },
+    "php": {
+        "version": "7.3"
     },
     "php-http/discovery": {
         "version": "1.6.1"
@@ -34,9 +37,6 @@
     },
     "php-http/httplug": {
         "version": "v2.0.0"
-    },
-    "php-http/message": {
-        "version": "1.7.2"
     },
     "php-http/message-factory": {
         "version": "v1.0.2"
