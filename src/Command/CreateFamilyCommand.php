@@ -52,8 +52,8 @@ class CreateFamilyCommand extends Command
             'labels' => ['en_US' => $this->assetFamilyCode], // TODO AST-239 Need to set at least 1 label, else the UI fail :/
         ]);
 
-        $this->createAttribute('reference', 'media_file', false, false, false);
-        $this->createAttribute('reference_localizable', 'media_file', true, false, false);
+        $this->createAttribute('reference', 'media_file', false, true, false);
+        $this->createAttribute('reference_localizable', 'media_file', true, true, false);
         $this->createAttribute('variation_scopable', 'media_file', false, true, false);
         $this->createAttribute('variation_localizable_scopable', 'media_file', true, true, false);
         $this->createAttribute('description', 'text', false, false, false);
