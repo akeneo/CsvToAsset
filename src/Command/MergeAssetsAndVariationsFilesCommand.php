@@ -204,6 +204,9 @@ class MergeAssetsAndVariationsFilesCommand extends Command
                 $this->locales[] = $variationLine['locale'];
             }
         }
+
+        $this->channels = array_filter($this->channels);
+        $this->locales = array_filter($this->locales);
     }
 
     /**
