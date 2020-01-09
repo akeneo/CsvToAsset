@@ -31,6 +31,9 @@ class MergeAssetsAndVariationsFilesCommand extends Command
     private const CSV_FIELD_ENCLOSURE = '"';
     private const CSV_END_OF_LINE_CHARACTER = "\n";
 
+    private const REFERENCE_FILE_FIELD = 'reference_file';
+    private const VARIATION_FILE_FIELD = 'variation_file';
+
     /** @var SymfonyStyle */
     private $io;
 
@@ -65,9 +68,10 @@ class MergeAssetsAndVariationsFilesCommand extends Command
         $targetFilePath = $input->getArgument('targetFilePath');
 
         $this->io->title('Merge PAM Assets CSV file with PAM Variation CSV file');
-        $this->io->text(
-            sprintf('This command will merge a given PAM Asset CSV file with a given Variations CSV file into one single file: "%s"', $targetFilePath)
-        );
+        $this->io->text([
+            sprintf('This command will merge a given PAM Asset CSV file with a given Variations CSV file into one single file: "%s"', $targetFilePath),
+            'This file will be importable via the command "app:import"'
+        ]);
 
         $hasValidFilePaths = $this->hasValidFilePaths($assetsFilePath, $variationsFilePath);
         if (!$hasValidFilePaths) {
@@ -102,6 +106,7 @@ class MergeAssetsAndVariationsFilesCommand extends Command
         $this->retrieveChannelsAndLocales();
         $this->mergeFiles($output, $targetFilePath);
         $this->io->success(sprintf('%s assets created in "%s"', $this->assetsReader->count(), $targetFilePath));
+        $this->io->text('You can now import it directly into your PIM by running the "app:import" command');
     }
 
     private function mergeFiles(OutputInterface $output, string $targetFilePath)
@@ -168,12 +173,12 @@ class MergeAssetsAndVariationsFilesCommand extends Command
         $assetHeaders = $this->assetsReader->getHeaders();
         $valuesHeaders = [];
         foreach ($this->channels as $channel) {
-            $valuesHeaders[] = sprintf('reference_file-%s', $channel);
-            $valuesHeaders[] = sprintf('variation_file-%s', $channel);
+            $valuesHeaders[] = sprintf('%s-%s', self::REFERENCE_FILE_FIELD, $channel);
+            $valuesHeaders[] = sprintf('%s-%s', self::VARIATION_FILE_FIELD, $channel);
 
             foreach ($this->locales as $locale) {
-                $valuesHeaders[] = sprintf('reference_file-%s-%s', $channel, $locale);
-                $valuesHeaders[] = sprintf('variation_file-%s-%s', $channel, $locale);
+                $valuesHeaders[] = sprintf('%s-%s-%s', self::REFERENCE_FILE_FIELD, $channel, $locale);
+                $valuesHeaders[] = sprintf('%s-%s-%s', self::VARIATION_FILE_FIELD, $channel, $locale);
             }
         }
 
@@ -219,11 +224,11 @@ class MergeAssetsAndVariationsFilesCommand extends Command
         
         foreach ($variations as $variation) {
             if (!empty($variation['locale'])) {
-                $structure[sprintf('reference_file-%s-%s', $variation['channel'], $variation['locale'])] = $variation['reference_file'];
-                $structure[sprintf('variation_file-%s-%s', $variation['channel'], $variation['locale'])] = $variation['variation_file'];
+                $structure[sprintf('%s-%s-%s', self::REFERENCE_FILE_FIELD, $variation['channel'], $variation['locale'])] = $variation['reference_file'];
+                $structure[sprintf('%s-%s-%s', self::VARIATION_FILE_FIELD, $variation['channel'], $variation['locale'])] = $variation['variation_file'];
             } else {
-                $structure[sprintf('reference_file-%s', $variation['channel'])] = $variation['reference_file'];
-                $structure[sprintf('variation_file-%s', $variation['channel'])] = $variation['variation_file'];
+                $structure[sprintf('%s-%s', self::REFERENCE_FILE_FIELD, $variation['channel'])] = $variation['reference_file'];
+                $structure[sprintf('%s-%s', self::VARIATION_FILE_FIELD, $variation['channel'])] = $variation['variation_file'];
             }
         }
 
