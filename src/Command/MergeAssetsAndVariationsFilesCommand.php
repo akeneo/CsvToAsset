@@ -31,8 +31,10 @@ class MergeAssetsAndVariationsFilesCommand extends Command
     private const CSV_FIELD_ENCLOSURE = '"';
     private const CSV_END_OF_LINE_CHARACTER = "\n";
 
-    private const REFERENCE_FILE_FIELD = 'reference_file';
-    private const VARIATION_FILE_FIELD = 'variation_file';
+    private const REFERENCE_FILE_FIELD = 'reference';
+    private const VARIATION_FILE_FIELD = 'variation_scopable';
+    private const LOCALIZED_REFERENCE_FILE_FIELD = 'reference_localizable';
+    private const LOCALIZED_VARIATION_FILE_FIELD = 'variation_localizable_scopable';
 
     /** @var SymfonyStyle */
     private $io;
@@ -177,8 +179,8 @@ class MergeAssetsAndVariationsFilesCommand extends Command
             $valuesHeaders[] = sprintf('%s-%s', self::VARIATION_FILE_FIELD, $channel);
 
             foreach ($this->locales as $locale) {
-                $valuesHeaders[] = sprintf('%s-%s-%s', self::REFERENCE_FILE_FIELD, $channel, $locale);
-                $valuesHeaders[] = sprintf('%s-%s-%s', self::VARIATION_FILE_FIELD, $channel, $locale);
+                $valuesHeaders[] = sprintf('%s-%s-%s', self::LOCALIZED_REFERENCE_FILE_FIELD, $locale, $channel);
+                $valuesHeaders[] = sprintf('%s-%s-%s', self::LOCALIZED_VARIATION_FILE_FIELD, $locale, $channel);
             }
         }
 
@@ -224,8 +226,8 @@ class MergeAssetsAndVariationsFilesCommand extends Command
         
         foreach ($variations as $variation) {
             if (!empty($variation['locale'])) {
-                $structure[sprintf('%s-%s-%s', self::REFERENCE_FILE_FIELD, $variation['channel'], $variation['locale'])] = $variation['reference_file'];
-                $structure[sprintf('%s-%s-%s', self::VARIATION_FILE_FIELD, $variation['channel'], $variation['locale'])] = $variation['variation_file'];
+                $structure[sprintf('%s-%s-%s', self::LOCALIZED_REFERENCE_FILE_FIELD, $variation['locale'], $variation['channel'])] = $variation['reference_file'];
+                $structure[sprintf('%s-%s-%s', self::LOCALIZED_VARIATION_FILE_FIELD, $variation['locale'], $variation['channel'])] = $variation['variation_file'];
             } else {
                 $structure[sprintf('%s-%s', self::REFERENCE_FILE_FIELD, $variation['channel'])] = $variation['reference_file'];
                 $structure[sprintf('%s-%s', self::VARIATION_FILE_FIELD, $variation['channel'])] = $variation['variation_file'];
