@@ -215,7 +215,7 @@ class MergeAssetsAndVariationsFilesCommand extends Command
     private function mergeAssetAndVariations(array $oldAsset, array $variations): array
     {
         $structure = $this->getAssetManagerFileHeaders();
-        $structure = array_flip($structure);
+        $structure = array_fill_keys(array_keys(array_flip($structure)), null);
         
         foreach ($variations as $variation) {
             if (!empty($variation['locale'])) {
@@ -227,7 +227,7 @@ class MergeAssetsAndVariationsFilesCommand extends Command
             }
         }
 
-        return array_merge($oldAsset, $structure);
+        return array_merge($structure, $oldAsset);
     }
 
     /**
