@@ -1,0 +1,19 @@
+version: '3.4'
+
+services:
+  php:
+    image: 'akeneo/pim-dev/php:7.3'
+    environment:
+      APP_ENV: '${APP_ENV:-prod}'
+      COMPOSER_HOME: '/var/www/.composer'
+      PHP_IDE_CONFIG: 'serverName=csv-to-asset'
+    volumes:
+      - './:/srv/csv-to-asset'
+      - '${HOST_COMPOSER_HOME:-~/.composer}:/var/www/.composer'
+    working_dir: '/srv/csv-to-asset'
+    command: 'php'
+    networks:
+      - 'csv-to-asset'
+
+networks:
+  csv-to-asset:
