@@ -14,7 +14,7 @@ use Symfony\Component\Filesystem\Filesystem;
  */
 class MediaAttributeConverter implements DataConverterInterface
 {
-    private const IMAGE_ATTRIBUTE_TYPE = 'image';
+    private const IMAGE_ATTRIBUTE_TYPE = 'media_file';
 
     /** @var AkeneoPimEnterpriseClientInterface */
     private $pimClient;
