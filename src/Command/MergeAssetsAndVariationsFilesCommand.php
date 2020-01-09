@@ -190,7 +190,7 @@ class MergeAssetsAndVariationsFilesCommand extends Command
                 continue;
             }
 
-            if (!$this->isVariationsHeaderValid($variationRow)) {
+            if (!$this->isHeaderValid($this->variationsReader, $variationRow)) {
                 continue;
             }
 
