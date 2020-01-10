@@ -223,7 +223,7 @@ class MergeAssetsAndVariationsFilesCommand extends Command
     {
         $structure = $this->getAssetManagerFileHeaders();
         $structure = array_fill_keys(array_keys(array_flip($structure)), null);
-        
+
         foreach ($variations as $variation) {
             if (!empty($variation['locale'])) {
                 $structure[sprintf('%s-%s-%s', self::LOCALIZED_REFERENCE_FILE_FIELD, $variation['locale'], $variation['channel'])] = $variation['reference_file'];

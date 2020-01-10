@@ -131,6 +131,28 @@ if ($process->getExitCode() > 0) {
 }
 
 
+// Run Export assets
+$process = new Process(
+    ['bin/console', sprintf('--env=%s', $_SERVER['APP_ENV']), 'pimee:assets:migrate:migrate-pam-attributes', $assetFamilyCode],
+    $eePath,
+);
+$process->run();
+
+if ($process->getExitCode() > 0) {
+    $io->error('An error occured during migration');
+    if ($process->getErrorOutput() !== '') {
+        $io->error($process->getErrorOutput());
+    }
+    $io->warning($process->getOutput());
+
+    die($process->getExitCode());
+} else {
+    $io->write($process->getOutput());
+
+    $io->success('Attributes updated');
+}
+
+
 $io->warning(sprintf('Remove %s !', CredentialReader::FILENAME));
 
 // pimee_product_asset_asset pimee_product_asset_asset_category pimee_product_asset_asset_tag pimee_product_asset_category pimee_product_asset_category_translation pimee_product_asset_channel_variation_configuration pimee_product_asset_file_metadata pimee_product_asset_reference pimee_product_asset_tag pimee_product_asset_variation
