@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace App\Command;
 
-use Akeneo\PimEnterprise\ApiClient\AkeneoPimEnterpriseClient;
-use Akeneo\PimEnterprise\ApiClient\AkeneoPimEnterpriseClientBuilder;
 use Akeneo\PimEnterprise\ApiClient\AkeneoPimEnterpriseClientInterface;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
@@ -85,6 +83,6 @@ class CreateFamilyCommand extends Command
             $data['media_type'] = 'image';
         }
 
-        $this->client->getAssetAttributeApi()->upsert($this->assetFamilyCode,$attributeCode, $data);
+        $this->client->getAssetAttributeApi()->upsert($this->assetFamilyCode, $attributeCode, $data);
     }
 }

@@ -10,6 +10,7 @@ services:
     volumes:
       - './:/srv/csv-to-asset'
       - '${HOST_COMPOSER_HOME:-~/.composer}:/var/www/.composer'
+      - '/home/pierallard/akeneo/pim-enterprise-dev/:/srv/ee'
     working_dir: '/srv/csv-to-asset'
     command: 'php'
     networks:
