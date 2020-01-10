@@ -19,6 +19,7 @@ use Symfony\Component\Console\Input\InputDefinition;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Component\Console\Output\ConsoleOutput;
+use App\Reader\CredentialReader;
 
 set_time_limit(0);
 
@@ -69,30 +70,43 @@ if ($process->getExitCode() > 0) {
 const CLIENT_LABEL = 'supertoolmigrateasset';
 
 // Run client create
-$process = new Process(
-    ['bin/console', sprintf('--env=%s', $_SERVER['APP_ENV']), 'pim:oauth-server:create-client', CLIENT_LABEL],
-    $eePath,
-);
-$process->run();
+$credentials = CredentialReader::read();
 
-if ($process->getExitCode() > 0) {
-    $io->error('An error occured during migration');
-    if ($process->getErrorOutput() !== '') {
-        $io->error($process->getErrorOutput());
+if (null === $credentials) {
+    $process = new Process(
+        ['bin/console', sprintf('--env=%s', $_SERVER['APP_ENV']), 'pim:oauth-server:create-client', CLIENT_LABEL],
+        $eePath,
+    );
+    $process->run();
+
+    if ($process->getExitCode() > 0) {
+        $io->error('An error occured during migration');
+        if ($process->getErrorOutput() !== '') {
+            $io->error($process->getErrorOutput());
+        }
+        $io->warning($process->getOutput());
+
+        die($process->getExitCode());
+    } else {
+        $output = $process->getOutput();
+        $io->write($output);
+        $outputLines = preg_split("/\n/", $output);
+        $credentials['clientId'] = preg_split('/: /', $outputLines[1])[1]; // client_id: 6_myx2xemkac0ckgw00cwk08wwg0s040oowk0ck4k48o4goc0wo
+        $credentials['secret'] = preg_split('/: /', $outputLines[2])[1]; // secret: 4q7dghrwghkwk00k0kc00g4c8g4c8c8owogwco0k04k4cso8wk
+        $credentials['username'] = 'admin'; // TODO
+        $credentials['password'] = 'admin'; // TODO
+
+        CredentialReader::write(
+            $credentials['clientId'],
+            $credentials['secret'],
+            $credentials['username'] ,
+            $credentials['password']
+        );
+
+        $io->success('Client created and stored');
     }
-    $io->warning($process->getOutput());
-
-    die($process->getExitCode());
 } else {
-    $output = $process->getOutput();
-    $io->write($output);
-    $outputLines = preg_split("/\n/", $output);
-    $clientId = preg_split('/: /', $outputLines[1])[1]; // client_id: 6_myx2xemkac0ckgw00cwk08wwg0s040oowk0ck4k48o4goc0wo
-    $secret = preg_split('/: /', $outputLines[2])[1]; // secret: 4q7dghrwghkwk00k0kc00g4c8g4c8c8owogwco0k04k4cso8wk
-    $username = 'admin'; // TODO
-    $password = 'admin'; // TODO
-
-    $io->success(sprintf('Client created (%s, %s, %s, %s)', $clientId, $secret, $username, $password));
+    $io->success(sprintf('Credentials already existing in file "%s".', CredentialReader::FILENAME));
 }
 
 // Run migration
@@ -117,5 +131,6 @@ if ($process->getExitCode() > 0) {
 }
 
 
+$io->warning(sprintf('Remove %s !', CredentialReader::FILENAME));
 
 // pimee_product_asset_asset pimee_product_asset_asset_category pimee_product_asset_asset_tag pimee_product_asset_category pimee_product_asset_category_translation pimee_product_asset_channel_variation_configuration pimee_product_asset_file_metadata pimee_product_asset_reference pimee_product_asset_tag pimee_product_asset_variation
