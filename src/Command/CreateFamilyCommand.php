@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Command;
 
+use Akeneo\PimEnterprise\ApiClient\AkeneoPimEnterpriseClientBuilder;
 use Akeneo\PimEnterprise\ApiClient\AkeneoPimEnterpriseClientInterface;
+use App\Reader\CredentialReader;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
@@ -15,8 +17,8 @@ class CreateFamilyCommand extends Command
 {
     protected static $defaultName = 'app:create-family';
 
-    /** @var AkeneoPimEnterpriseClientInterface */
-    private $client;
+    /** @var AkeneoPimEnterpriseClientBuilder */
+    private $clientBuilder;
 
     /** @var string */
     private $assetFamilyCode;
@@ -24,11 +26,14 @@ class CreateFamilyCommand extends Command
     /** @var SymfonyStyle */
     private $io;
 
-    public function __construct(AkeneoPimEnterpriseClientInterface $client)
+    /** @var AkeneoPimEnterpriseClientInterface */
+    private $client;
+
+    public function __construct(AkeneoPimEnterpriseClientBuilder $clientBuilder)
     {
         parent::__construct($this::$defaultName);
 
-        $this->client = $client;
+        $this->clientBuilder = $clientBuilder;
     }
 
     protected function configure()
@@ -43,6 +48,15 @@ class CreateFamilyCommand extends Command
     {
         $this->io = new SymfonyStyle($input, $output);
         $this->assetFamilyCode = $input->getArgument('assetFamilyCode');
+
+        $credentials = CredentialReader::read();
+        var_dump($credentials);
+        $this->client = $this->clientBuilder->buildAuthenticatedByPassword(
+            $credentials['clientId'],
+            $credentials['secret'],
+            $credentials['username'],
+            $credentials['password']
+        );
 
         $this->io->writeln(sprintf('Creation of asset family "%s"...', $this->assetFamilyCode));
         $this->client->getAssetFamilyApi()->upsert($this->assetFamilyCode, [
