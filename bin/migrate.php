@@ -111,7 +111,7 @@ if (null === $credentials) {
 
 // Run migration
 $process = new Process(
-    ['bin/console', 'app:migrate', $assetFamilyCode]
+    ['bin/console', 'app:migrate', $assetFamilyCode ]
 );
 
 $process->run();

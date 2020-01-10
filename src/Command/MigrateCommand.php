@@ -47,7 +47,7 @@ class MigrateCommand extends Command
     protected function configure()
     {
         $this
-            ->setDescription('Migrate TODO')
+            ->setDescription('Migrate a complete family')
             ->addArgument('assetFamilyCode', InputArgument::REQUIRED, 'The asset family code to migrate')
         ;
     }
@@ -57,8 +57,19 @@ class MigrateCommand extends Command
         $this->io = new SymfonyStyle($input, $output);
         $this->assetFamilyCode = $input->getArgument('assetFamilyCode');
 
+        $tmpfname = tempnam('/tmp', 'migration_target_');
+
+        $this->executeCommand('app:create-family', [$this->assetFamilyCode]);
+        $this->executeCommand('app:merge-files', ['/tmp/assets.csv', '/tmp/variations.csv', $tmpfname]);
+        $this->executeCommand('app:import', [$tmpfname, $this->assetFamilyCode]);
+
+        $this->io->success('Migration success!');
+    }
+
+    private function executeCommand($name, $arguments)
+    {
         $process = new Process(
-            ['bin/console', 'app:create-family', $this->assetFamilyCode]
+            array_merge(['bin/console', $name], $arguments)
         );
 
         $process->run();
@@ -73,51 +84,6 @@ class MigrateCommand extends Command
         } else {
             $output = $process->getOutput();
             $this->io->write($output);
-
-            $this->io->success('Family created');
-        }
-
-
-        $process = new Process(
-            ['bin/console', 'app:merge-files', '/tmp/assets.csv', '/tmp/variations.csv', '/tmp/target.csv']
-        );
-
-        $process->run();
-        if ($process->getExitCode() > 0) {
-            $this->io->error('An error occured during migration');
-            if ($process->getErrorOutput() !== '') {
-                $this->io->error($process->getErrorOutput());
-            }
-            $this->io->warning($process->getOutput());
-
-            die($process->getExitCode());
-        } else {
-            $output = $process->getOutput();
-            $this->io->write($output);
-
-            $this->io->success('Files merged');
-        }
-
-
-
-        $process = new Process(
-            ['bin/console', 'app:import', '/tmp/target.csv', $this->assetFamilyCode]
-        );
-
-        $process->run();
-        if ($process->getExitCode() > 0) {
-            $this->io->error('An error occured during migration');
-            if ($process->getErrorOutput() !== '') {
-                $this->io->error($process->getErrorOutput());
-            }
-            $this->io->warning($process->getOutput());
-
-            die($process->getExitCode());
-        } else {
-            $output = $process->getOutput();
-            $this->io->write($output);
-
-            $this->io->success('Asset imported');
         }
     }
 }
