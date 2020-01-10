@@ -92,10 +92,6 @@ class ImportCommand extends Command
             ->setDescription('Import a CSV file as Asset Family Assets')
             ->addArgument('filePath', InputArgument::REQUIRED, 'The filePath of the file to import.')
             ->addArgument('assetFamilyCode', InputArgument::REQUIRED, 'The asset family code the assets belong to.')
-            ->addOption('apiUsername', null, InputOption::VALUE_OPTIONAL, 'The username of the user.', getenv('AKENEO_API_USERNAME'))
-            ->addOption('apiPassword', null, InputOption::VALUE_OPTIONAL, 'The password of the user.', getenv('AKENEO_API_PASSWORD'))
-            ->addOption('apiClientId', null, InputOption::VALUE_OPTIONAL, '', getenv('AKENEO_API_CLIENT_ID'))
-            ->addOption('apiClientSecret', null, InputOption::VALUE_OPTIONAL, '', getenv('AKENEO_API_CLIENT_SECRET'))
         ;
     }
 
@@ -105,7 +101,7 @@ class ImportCommand extends Command
         $this->logger->startLogging();
 
         $credentials = CredentialReader::read();
-        $this->client = $this->apiClientBuilder->buildAuthenticatedByPassword(
+        $this->apiClient = $this->apiClientBuilder->buildAuthenticatedByPassword(
             $credentials['clientId'],
             $credentials['secret'],
             $credentials['username'],

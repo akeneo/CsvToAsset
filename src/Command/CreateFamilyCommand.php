@@ -50,7 +50,6 @@ class CreateFamilyCommand extends Command
         $this->assetFamilyCode = $input->getArgument('assetFamilyCode');
 
         $credentials = CredentialReader::read();
-        var_dump($credentials);
         $this->client = $this->clientBuilder->buildAuthenticatedByPassword(
             $credentials['clientId'],
             $credentials['secret'],

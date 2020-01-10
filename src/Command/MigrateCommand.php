@@ -14,10 +14,15 @@ declare(strict_types=1);
 namespace App\Command;
 
 use Symfony\Component\Console\Command\Command;
+use Symfony\Component\Console\Input\ArgvInput;
+use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Input\InputArgument;
+use Symfony\Component\Console\Input\InputDefinition;
 use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Input\StringInput;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
+use Symfony\Component\Process\Process;
 
 /**
  * @author Pierre Allard <pierre.allard@akeneo.com>
@@ -26,20 +31,17 @@ class MigrateCommand extends Command
 {
     protected static $defaultName = 'app:migrate';
 
-    /** @var CreateFamilyCommand */
-    private $createFamilyCommand;
-
     /** @var string */
     private $assetFamilyCode;
 
     /** @var SymfonyStyle */
     private $io;
 
-    public function __construct(CreateFamilyCommand $createFamilyCommand)
-    {
+    public function __construct(
+        CreateFamilyCommand $createFamilyCommand,
+        MergeAssetsAndVariationsFilesCommand $mergeAssetsAndVariationsFilesCommand
+    ) {
         parent::__construct($this::$defaultName);
-
-        $this->createFamilyCommand = $createFamilyCommand;
     }
 
     protected function configure()
@@ -55,8 +57,67 @@ class MigrateCommand extends Command
         $this->io = new SymfonyStyle($input, $output);
         $this->assetFamilyCode = $input->getArgument('assetFamilyCode');
 
-        $this->createFamilyCommand->execute($input, $output);
+        $process = new Process(
+            ['bin/console', 'app:create-family', $this->assetFamilyCode]
+        );
 
-        $this->io->success('TODO To implement!');
+        $process->run();
+        if ($process->getExitCode() > 0) {
+            $this->io->error('An error occured during migration');
+            if ($process->getErrorOutput() !== '') {
+                $this->io->error($process->getErrorOutput());
+            }
+            $this->io->warning($process->getOutput());
+
+            die($process->getExitCode());
+        } else {
+            $output = $process->getOutput();
+            $this->io->write($output);
+
+            $this->io->success('Family created');
+        }
+
+
+        $process = new Process(
+            ['bin/console', 'app:merge-files', '/tmp/assets.csv', '/tmp/variations.csv', '/tmp/target.csv']
+        );
+
+        $process->run();
+        if ($process->getExitCode() > 0) {
+            $this->io->error('An error occured during migration');
+            if ($process->getErrorOutput() !== '') {
+                $this->io->error($process->getErrorOutput());
+            }
+            $this->io->warning($process->getOutput());
+
+            die($process->getExitCode());
+        } else {
+            $output = $process->getOutput();
+            $this->io->write($output);
+
+            $this->io->success('Files merged');
+        }
+
+
+
+        $process = new Process(
+            ['bin/console', 'app:import', '/tmp/target.csv', $this->assetFamilyCode]
+        );
+
+        $process->run();
+        if ($process->getExitCode() > 0) {
+            $this->io->error('An error occured during migration');
+            if ($process->getErrorOutput() !== '') {
+                $this->io->error($process->getErrorOutput());
+            }
+            $this->io->warning($process->getOutput());
+
+            die($process->getExitCode());
+        } else {
+            $output = $process->getOutput();
+            $this->io->write($output);
+
+            $this->io->success('Asset imported');
+        }
     }
 }
