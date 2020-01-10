@@ -78,14 +78,14 @@ const CLIENT_LABEL = 'supertoolmigrateasset';
 $credentials = CredentialReader::read();
 if (null === $credentials) {
     executeCommand(
-        ['bin/console', sprintf('--env=%s', $_SERVER['APP_ENV']), 'pim:oauth-server:create-client', CLIENT_LABEL],
+        ['bin/console', sprintf('--env=%s', $_SERVER['APP_ENV']), 'akeneo:connectivity-connection:create', CLIENT_LABEL],
         $eePath,
         function ($output) {
             $outputLines = preg_split("/\n/", $output);
-            $credentials['clientId'] = preg_split('/: /', $outputLines[1])[1]; // client_id: 6_myx2xemkac0ckgw00cwk08wwg0s040oowk0ck4k48o4goc0wo
-            $credentials['secret'] = preg_split('/: /', $outputLines[2])[1]; // secret: 4q7dghrwghkwk00k0kc00g4c8g4c8c8owogwco0k04k4cso8wk
-            $credentials['username'] = 'admin'; // TODO
-            $credentials['password'] = 'admin'; // TODO
+            $credentials['clientId'] = preg_split('/: /', $outputLines[2])[1];
+            $credentials['secret'] = preg_split('/: /', $outputLines[3])[1];
+            $credentials['username'] = preg_split('/: /', $outputLines[4])[1];
+            $credentials['password'] = preg_split('/: /', $outputLines[5])[1];
 
             CredentialReader::write(
                 $credentials['clientId'],
