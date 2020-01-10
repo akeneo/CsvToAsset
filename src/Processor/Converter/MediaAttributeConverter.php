@@ -14,7 +14,7 @@ use Symfony\Component\Filesystem\Filesystem;
  */
 class MediaAttributeConverter implements DataConverterInterface
 {
-    private const IMAGE_ATTRIBUTE_TYPE = 'image';
+    private const IMAGE_ATTRIBUTE_TYPE = 'media_file';
 
     /** @var AkeneoPimEnterpriseClientInterface */
     private $pimClient;
@@ -35,41 +35,6 @@ class MediaAttributeConverter implements DataConverterInterface
 
     public function convert(array $attribute, string $data, array $context)
     {
-        $mediaFilePath = $this->mediaFilePath($data, $context);
-        $this->checkMediaExists($mediaFilePath);
-        $mediaIdentifier = $this->uploadMediaToPIM($mediaFilePath);
-
-        return $mediaIdentifier;
-    }
-
-    private function mediaFilePath(string $relativeMediaPath, array $context): string
-    {
-        $fileToImportPath = $context['filePath'];
-
-        return sprintf('%s%s%s', dirname($fileToImportPath), DIRECTORY_SEPARATOR, $relativeMediaPath);
-    }
-
-    private function checkMediaExists(string $mediaFilePath): void
-    {
-        if (!$this->filesystem->exists($mediaFilePath)) {
-            throw new \RuntimeException(sprintf('media file at path "%s" was not found.', $mediaFilePath));
-        }
-    }
-
-    private function uploadMediaToPIM(string $mediaFilePath): string
-    {
-        try {
-            $mediaIdentifier = $this->pimClient->getReferenceEntityMediaFileApi()->create($mediaFilePath);
-
-            return $mediaIdentifier;
-        } catch (\Exception $exception) {
-            $message = sprintf(
-                'An error occured while uploading the media at path "%s" to the PIM: %s',
-                $mediaFilePath,
-                $exception->getMessage()
-            );
-
-            throw new \RuntimeException($message);
-        }
+        return $data;
     }
 }
