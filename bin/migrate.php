@@ -45,38 +45,11 @@ $eePath = $input->getArgument('ee-path');
 
 require dirname(__DIR__).'/config/bootstrap.php';
 
+function executeCommand($arguments, $path, $callback)
+{
+    $io = new SymfonyStyle(new ArgvInput(), new ConsoleOutput());
 
-// Run Export assets
-$process = new Process(
-    ['bin/console', sprintf('--env=%s', $_SERVER['APP_ENV']), 'pimee:migrate-pam-assets:export-assets', '/tmp'],
-    $eePath,
-);
-$process->run();
-
-if ($process->getExitCode() > 0) {
-    $io->error('An error occured during migration');
-    if ($process->getErrorOutput() !== '') {
-        $io->error($process->getErrorOutput());
-    }
-    $io->warning($process->getOutput());
-
-    die($process->getExitCode());
-} else {
-    $io->write($process->getOutput());
-
-    $io->success('Assets exported');
-}
-
-const CLIENT_LABEL = 'supertoolmigrateasset';
-
-// Run client create
-$credentials = CredentialReader::read();
-
-if (null === $credentials) {
-    $process = new Process(
-        ['bin/console', sprintf('--env=%s', $_SERVER['APP_ENV']), 'pim:oauth-server:create-client', CLIENT_LABEL],
-        $eePath,
-    );
+    $process = new Process($arguments, $path);
     $process->run();
 
     if ($process->getExitCode() > 0) {
@@ -90,69 +63,56 @@ if (null === $credentials) {
     } else {
         $output = $process->getOutput();
         $io->write($output);
-        $outputLines = preg_split("/\n/", $output);
-        $credentials['clientId'] = preg_split('/: /', $outputLines[1])[1]; // client_id: 6_myx2xemkac0ckgw00cwk08wwg0s040oowk0ck4k48o4goc0wo
-        $credentials['secret'] = preg_split('/: /', $outputLines[2])[1]; // secret: 4q7dghrwghkwk00k0kc00g4c8g4c8c8owogwco0k04k4cso8wk
-        $credentials['username'] = 'admin'; // TODO
-        $credentials['password'] = 'admin'; // TODO
-
-        CredentialReader::write(
-            $credentials['clientId'],
-            $credentials['secret'],
-            $credentials['username'] ,
-            $credentials['password']
-        );
-
-        $io->success('Client created and stored');
+        $callback($output);
     }
+}
+
+executeCommand(
+    ['bin/console', sprintf('--env=%s', $_SERVER['APP_ENV']), 'pimee:migrate-pam-assets:export-assets', '/tmp'],
+    $eePath,
+    function ($output) { }
+);
+
+const CLIENT_LABEL = 'supertoolmigrateasset';
+
+$credentials = CredentialReader::read();
+if (null === $credentials) {
+    executeCommand(
+        ['bin/console', sprintf('--env=%s', $_SERVER['APP_ENV']), 'pim:oauth-server:create-client', CLIENT_LABEL],
+        $eePath,
+        function ($output) {
+            $outputLines = preg_split("/\n/", $output);
+            $credentials['clientId'] = preg_split('/: /', $outputLines[1])[1]; // client_id: 6_myx2xemkac0ckgw00cwk08wwg0s040oowk0ck4k48o4goc0wo
+            $credentials['secret'] = preg_split('/: /', $outputLines[2])[1]; // secret: 4q7dghrwghkwk00k0kc00g4c8g4c8c8owogwco0k04k4cso8wk
+            $credentials['username'] = 'admin'; // TODO
+            $credentials['password'] = 'admin'; // TODO
+
+            CredentialReader::write(
+                $credentials['clientId'],
+                $credentials['secret'],
+                $credentials['username'] ,
+                $credentials['password']
+            );
+        }
+    );
+
+    $credentials = CredentialReader::read();
 } else {
     $io->success(sprintf('Credentials already existing in file "%s".', CredentialReader::FILENAME));
 }
 
-// Run migration
-$process = new Process(
-    ['bin/console', 'app:migrate', $assetFamilyCode ]
+
+executeCommand(
+    ['bin/console', 'app:migrate', $assetFamilyCode],
+    null,
+    function ($output) { }
 );
 
-$process->run();
-if ($process->getExitCode() > 0) {
-    $io->error('An error occured during migration');
-    if ($process->getErrorOutput() !== '') {
-        $io->error($process->getErrorOutput());
-    }
-    $io->warning($process->getOutput());
-
-    die($process->getExitCode());
-} else {
-    $output = $process->getOutput();
-    $io->write($output);
-
-    $io->success('Asset migrated');
-}
-
-
-// Run Export assets
-$process = new Process(
+executeCommand(
     ['bin/console', sprintf('--env=%s', $_SERVER['APP_ENV']), 'pimee:assets:migrate:migrate-pam-attributes', $assetFamilyCode],
     $eePath,
+    function ($output) { }
 );
-$process->run();
 
-if ($process->getExitCode() > 0) {
-    $io->error('An error occured during migration');
-    if ($process->getErrorOutput() !== '') {
-        $io->error($process->getErrorOutput());
-    }
-    $io->warning($process->getOutput());
-
-    die($process->getExitCode());
-} else {
-    $io->write($process->getOutput());
-
-    $io->success('Attributes updated');
-}
-
-
-$io->warning(sprintf('Remove %s !', CredentialReader::FILENAME));
-
-// pimee_product_asset_asset pimee_product_asset_asset_category pimee_product_asset_asset_tag pimee_product_asset_category pimee_product_asset_category_translation pimee_product_asset_channel_variation_configuration pimee_product_asset_file_metadata pimee_product_asset_reference pimee_product_asset_tag pimee_product_asset_variation
+$io->success('Asset were fully migrated!');
+$io->warning(sprintf('Don\'t forget to remove the API credential file located in "%s". It contains sensitive data to connect to your PIM instance.', CredentialReader::FILENAME));
