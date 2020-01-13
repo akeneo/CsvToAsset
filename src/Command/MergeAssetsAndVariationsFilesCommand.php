@@ -110,8 +110,6 @@ class MergeAssetsAndVariationsFilesCommand extends Command
         }
 
         $this->io->text('');
-
-        $this->io->text('Now merging files and create new Assets...');
         $this->retrieveChannelsAndLocales();
         $this->mergeFiles($output, $targetFilePath);
         $this->io->success(sprintf('%s assets created in "%s"', $this->assetsReader->count(), $targetFilePath));
@@ -129,10 +127,13 @@ class MergeAssetsAndVariationsFilesCommand extends Command
         $writer->openToFile($targetFilePath);
         $writer->addRow($this->getAssetManagerFileHeaders());
 
-        $this->indexVariations();
+        $this->io->text('Indexing variations...');
+        $this->indexVariationLinesByAssetCode();
 
+        $this->io->text('Now merging files and create new Assets...');
         $progressBar->start();
 
+        $headers = $this->assetsReader->getHeaders();
         foreach ($this->assetsReader as $assetLineNumber => $row) {
             if ($assetLineNumber === 1) {
                 continue;
@@ -142,25 +143,12 @@ class MergeAssetsAndVariationsFilesCommand extends Command
                 continue;
             }
 
-            $assetLine = array_combine($this->assetsReader->getHeaders(), $row);
-            $variationsForThisAsset = [];
+            $assetLine = array_combine($headers, $row);
 
             $index = $this->getIndexationKey($assetLine['code']);
-            $variationsLines = isset($this->indexedVariations[$index])
+            $variationsForThisAsset = isset($this->indexedVariations[$index])
                 ? $this->indexedVariations[$index]
                 : [];
-
-            foreach ($variationsLines as $variationsLine) {
-                $line = exec(
-                    sprintf(
-                        'tail -n+%s %s 2>/dev/null | head -n1 ', $variationsLine, $this->variationsFilePath
-                    )
-                );
-
-                $line = explode(';', $line);
-                $line = array_combine($this->variationsReader->getHeaders(), $line);
-                $variationsForThisAsset[] = $line;
-            }
 
             $newAsset = $this->mergeAssetAndVariations($assetLine, $variationsForThisAsset);
 
@@ -205,6 +193,9 @@ class MergeAssetsAndVariationsFilesCommand extends Command
      */
     private function retrieveChannelsAndLocales(): void
     {
+        $this->io->text('Retrieving locales & channels...');
+        $headers = $this->variationsReader->getHeaders();
+
         foreach ($this->variationsReader as $variationLineNumber => $variationRow) {
             if ($variationLineNumber === 1) {
                 continue;
@@ -214,7 +205,7 @@ class MergeAssetsAndVariationsFilesCommand extends Command
                 continue;
             }
 
-            $variationLine = array_combine($this->variationsReader->getHeaders(), $variationRow);
+            $variationLine = array_combine($headers, $variationRow);
 
             if (!in_array($variationLine['channel'], $this->channels)) {
                 $this->channels[] = $variationLine['channel'];
@@ -271,18 +262,16 @@ class MergeAssetsAndVariationsFilesCommand extends Command
     }
 
     /**
-     * Parse the whole variations CSV file and index there line by Asset Code:
-     * [
-     *      'bridge' => [2, 4, 32], // meaning line 2, 4 and 32 of variations file are for "bridge" asset
-     *      'paint' => [10, 11],
-     * ]
-     *
+     * Parse the whole variations CSV file and index them by Asset Code:
      * This is to avoid to re-parse the whole variations file for each asset later.
      */
-    private function indexVariations(): void
+    private function indexVariationLinesByAssetCode(): void
     {
-        $assetCodeColumnIndex = array_search('asset', $this->variationsReader->getHeaders());
+        $headers = $this->variationsReader->getHeaders();
+
         foreach ($this->variationsReader as $variationLineNumber => $variationRow) {
+            $variationLine = array_combine($headers, $variationRow);
+
             if ($variationLineNumber === 1) {
                 continue;
             }
@@ -291,8 +280,8 @@ class MergeAssetsAndVariationsFilesCommand extends Command
                 continue;
             }
 
-            $index = $this->getIndexationKey($variationRow[$assetCodeColumnIndex]);
-            $this->indexedVariations[$index][] = $variationLineNumber;
+            $index = $this->getIndexationKey($variationLine['asset']);
+            $this->indexedVariations[$index][] = $variationLine;
         }
     }
 
