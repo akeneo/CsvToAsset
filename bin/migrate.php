@@ -73,7 +73,7 @@ executeCommand(
     function ($output) { }
 );
 
-const CLIENT_LABEL = 'supertoolmigrateasset';
+const CLIENT_LABEL = 'csv-to-asset';
 
 $credentials = CredentialReader::read();
 if (null === $credentials) {
@@ -103,7 +103,7 @@ if (null === $credentials) {
 
 
 executeCommand(
-    ['bin/console', 'app:migrate', $assetFamilyCode],
+    ['bin/console', 'app:migrate', $assetFamilyCode, '/tmp/assets.csv', '/tmp/variations.csv'],
     null,
     function ($output) { }
 );
