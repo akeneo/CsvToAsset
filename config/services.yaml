@@ -28,13 +28,5 @@ services:
         arguments:
             $baseUri: '%env(AKENEO_API_BASE_URI)%'
 
-#    Akeneo\PimEnterprise\ApiClient\AkeneoPimEnterpriseClientInterface:
-#        factory: 'Akeneo\PimEnterprise\ApiClient\AkeneoPimEnterpriseClientBuilder:buildAuthenticatedByPassword'
-#        arguments:
-#            - '%env(AKENEO_API_CLIENT_ID)%'
-#            - '%env(AKENEO_API_CLIENT_SECRET)%'
-#            - '%env(AKENEO_API_USERNAME)%'
-#            - '%env(AKENEO_API_PASSWORD)%'
-
     App\Processor\Converter\DataConverter:
         arguments: [!tagged app.data_converter]
