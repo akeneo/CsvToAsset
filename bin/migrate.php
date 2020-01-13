@@ -90,7 +90,7 @@ if (null === $credentials) {
             CredentialReader::write(
                 $credentials['clientId'],
                 $credentials['secret'],
-                $credentials['username'] ,
+                $credentials['username'],
                 $credentials['password']
             );
         }

@@ -7,6 +7,8 @@ First, clone this repository, then:
 ## Without Docker
 
 ```bash
+git clone git@github.com:akeneo/CsvToRefenceEntity.git csv_to_reference_entity
+cd csv_to_reference_entity
 composer install
 ```
 
@@ -20,7 +22,7 @@ docker-compose run -u www-data --rm php php composer install
 # Setup
 Note: to setup this tool, you'll need a valid **API Client ID** and its **API Client secret** from your Akeneo PIM instance. Read the dedicated documentation to proceed: https://api.akeneo.com/getting-started-admin.html
 
-Back in tool, you need to copy the [.env](https://symfony.com/doc/current/components/dotenv.html) file:
+You need to copy the [.env](https://symfony.com/doc/current/components/dotenv.html) file:
 ```bash
 cp .env .env.local
 ```
@@ -28,13 +30,35 @@ cp .env .env.local
 Then open `.env.local` to define the needed configuration vars:
 ```
 AKENEO_API_BASE_URI=http://your-akeneo-pim-instance.com
-AKENEO_API_CLIENT_ID=123456789abcdefghijklmnopqrstuvwxyz
-AKENEO_API_CLIENT_SECRET=123456789abcdefghijklmnopqrstuvwxyz
-AKENEO_API_USERNAME=admin
-AKENEO_API_PASSWORD=admin
 ```
 
+## Docker setup [optionall]
+
+- Update your Enterprise Edition docker-compose file to allowe external data from network
+
+```yaml
+networks:
+  pim:
+    external: true
+```
+
+- Copy paste this `docker-compose.override.yml.dist` into `docker-compose.override.yml` and set your path to Enterprise Edition
+- Set into `.env.local` variable `AKENEO_API_BASE_URI=http://httpd:80`
+
 # How to Use
+
+Run `./bin/migrate.php <family-code> <path-to-ee-installation>`
+
+Note: Using docker, your `path-to-ee-installation` will be `/srv/ee`.
+
+This command will
+- Export the former Akeneo PAM tables and put it into temporary folder in CSV format
+- Create a dedicated API credentials
+- Migrate the data:
+  - Create a new Asset family with code `family-code`
+  - Merge exported Akeneo PAM CSV files
+  - Import the merged files into Akeneo PIM in the new Asset format
+- Migrate the former Akeneo PAM attributes into new Asset attributes
 
 This tools provides several commands to migrate your PAM assets to the Asset Manager assets.
 
