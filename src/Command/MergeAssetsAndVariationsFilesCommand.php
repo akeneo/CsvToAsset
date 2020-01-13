@@ -10,13 +10,13 @@ use Box\Spout\Common\Exception\UnsupportedTypeException;
 use Box\Spout\Common\Type;
 use Box\Spout\Reader\Exception\ReaderNotOpenedException;
 use Box\Spout\Writer\CSV\Writer;
+use Box\Spout\Writer\WriterFactory;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Helper\ProgressBar;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
-use Box\Spout\Writer\WriterFactory;
 
 /**
  * @author    Adrien Pétremann <adrien.petremann@akeneo.com>
@@ -45,6 +45,12 @@ class MergeAssetsAndVariationsFilesCommand extends Command
     /** @var CsvReader */
     private $variationsReader;
 
+    /** @var array */
+    private $indexedVariations = [];
+
+    /** @var string */
+    private $variationsFilePath;
+
     /** @var string[] */
     private $channels = [];
 
@@ -68,6 +74,7 @@ class MergeAssetsAndVariationsFilesCommand extends Command
         $assetsFilePath = $input->getArgument('assetsFilePath');
         $variationsFilePath = $input->getArgument('variationsFilePath');
         $targetFilePath = $input->getArgument('targetFilePath');
+        $this->variationsFilePath = $variationsFilePath;
 
         $this->io->title('Merge PAM Assets CSV file with PAM Variation CSV file');
         $this->io->text([
@@ -103,8 +110,6 @@ class MergeAssetsAndVariationsFilesCommand extends Command
         }
 
         $this->io->text('');
-
-        $this->io->text('Now merging files and create new Assets...');
         $this->retrieveChannelsAndLocales();
         $this->mergeFiles($output, $targetFilePath);
         $this->io->success(sprintf('%s assets created in "%s"', $this->assetsReader->count(), $targetFilePath));
@@ -114,7 +119,6 @@ class MergeAssetsAndVariationsFilesCommand extends Command
     private function mergeFiles(OutputInterface $output, string $targetFilePath)
     {
         $progressBar = new ProgressBar($output, $this->assetsReader->count());
-        $progressBar->start();
 
         /** @var Writer $writer */
         $writer = WriterFactory::create(Type::CSV);
@@ -123,6 +127,13 @@ class MergeAssetsAndVariationsFilesCommand extends Command
         $writer->openToFile($targetFilePath);
         $writer->addRow($this->getAssetManagerFileHeaders());
 
+        $this->io->text('Indexing variations...');
+        $this->indexVariationLinesByAssetCode();
+
+        $this->io->text('Now merging files and create new Assets...');
+        $progressBar->start();
+
+        $headers = $this->assetsReader->getHeaders();
         foreach ($this->assetsReader as $assetLineNumber => $row) {
             if ($assetLineNumber === 1) {
                 continue;
@@ -132,29 +143,19 @@ class MergeAssetsAndVariationsFilesCommand extends Command
                 continue;
             }
 
-            $assetLine = array_combine($this->assetsReader->getHeaders(), $row);
+            $assetLine = array_combine($headers, $row);
 
-            $variationsForThisAsset = [];
-            foreach ($this->variationsReader as $variationLineNumber => $variationRow) {
-                if ($variationLineNumber === 1) {
-                    continue;
-                }
-
-                if (!$this->isHeaderValid($this->variationsReader, $variationRow)) {
-                    continue;
-                }
-
-                $variationLine = array_combine($this->variationsReader->getHeaders(), $variationRow);
-
-                if ($variationLine['asset'] === $assetLine['code']) {
-                    $variationsForThisAsset[] = $variationLine;
-                }
-            }
+            $index = $this->getIndexationKey($assetLine['code']);
+            $variationsForThisAsset = isset($this->indexedVariations[$index])
+                ? $this->indexedVariations[$index]
+                : [];
 
             $newAsset = $this->mergeAssetAndVariations($assetLine, $variationsForThisAsset);
 
             $writer->addRow($newAsset);
-            $progressBar->advance();
+            if ($assetLineNumber % 100 === 0) {
+                $progressBar->advance(100);
+            }
         }
 
         $writer->close();
@@ -192,6 +193,9 @@ class MergeAssetsAndVariationsFilesCommand extends Command
      */
     private function retrieveChannelsAndLocales(): void
     {
+        $this->io->text('Retrieving locales & channels...');
+        $headers = $this->variationsReader->getHeaders();
+
         foreach ($this->variationsReader as $variationLineNumber => $variationRow) {
             if ($variationLineNumber === 1) {
                 continue;
@@ -201,7 +205,7 @@ class MergeAssetsAndVariationsFilesCommand extends Command
                 continue;
             }
 
-            $variationLine = array_combine($this->variationsReader->getHeaders(), $variationRow);
+            $variationLine = array_combine($headers, $variationRow);
 
             if (!in_array($variationLine['channel'], $this->channels)) {
                 $this->channels[] = $variationLine['channel'];
@@ -255,5 +259,34 @@ class MergeAssetsAndVariationsFilesCommand extends Command
         }
 
         return $hasValidFilePath;
+    }
+
+    /**
+     * Parse the whole variations CSV file and index them by Asset Code:
+     * This is to avoid to re-parse the whole variations file for each asset later.
+     */
+    private function indexVariationLinesByAssetCode(): void
+    {
+        $headers = $this->variationsReader->getHeaders();
+
+        foreach ($this->variationsReader as $variationLineNumber => $variationRow) {
+            $variationLine = array_combine($headers, $variationRow);
+
+            if ($variationLineNumber === 1) {
+                continue;
+            }
+
+            if (!$this->isHeaderValid($this->variationsReader, $variationRow)) {
+                continue;
+            }
+
+            $index = $this->getIndexationKey($variationLine['asset']);
+            $this->indexedVariations[$index][] = $variationLine;
+        }
+    }
+
+    private function getIndexationKey($assetCode): string
+    {
+        return sprintf('ass_%s', $assetCode);
     }
 }
