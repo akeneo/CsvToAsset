@@ -32,9 +32,9 @@ Then open `.env.local` to define the needed configuration vars:
 AKENEO_API_BASE_URI=http://your-akeneo-pim-instance.com
 ```
 
-## Docker setup [optionall]
+## Docker setup [optional]
 
-- Update your Enterprise Edition docker-compose file to allowe external data from network
+- Update your Enterprise Edition docker-compose file to allow external data from network
 
 ```yaml
 networks:
@@ -51,8 +51,8 @@ Run `./bin/migrate.php <family-code> <path-to-ee-installation>`
 
 Note: Using docker, your `path-to-ee-installation` will be `/srv/ee`.
 
-This command will
-- Export the former Akeneo PAM tables and put it into temporary folder in CSV format
+This command will:
+- Export the PAM assets in CSV into a temporary folder
 - Create a dedicated API credentials
 - Migrate the data:
   - Create a new Asset family with code `family-code`
