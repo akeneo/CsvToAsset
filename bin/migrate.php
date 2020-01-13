@@ -68,7 +68,7 @@ function executeCommand($arguments, $path, $callback)
 }
 
 executeCommand(
-    ['bin/console', sprintf('--env=%s', $_SERVER['APP_ENV']), 'pimee:migrate-pam-assets:export-assets', '/tmp'],
+    ['bin/console', 'pimee:migrate-pam-assets:export-assets', '/tmp'],
     $eePath,
     function ($output) { }
 );
@@ -78,7 +78,7 @@ const CLIENT_LABEL = 'supertoolmigrateasset';
 $credentials = CredentialReader::read();
 if (null === $credentials) {
     executeCommand(
-        ['bin/console', sprintf('--env=%s', $_SERVER['APP_ENV']), 'akeneo:connectivity-connection:create', CLIENT_LABEL],
+        ['bin/console', 'akeneo:connectivity-connection:create', CLIENT_LABEL],
         $eePath,
         function ($output) {
             $outputLines = preg_split("/\n/", $output);
@@ -109,7 +109,7 @@ executeCommand(
 );
 
 executeCommand(
-    ['bin/console', sprintf('--env=%s', $_SERVER['APP_ENV']), 'pimee:assets:migrate:migrate-pam-attributes', $assetFamilyCode],
+    ['bin/console', 'pimee:assets:migrate:migrate-pam-attributes', $assetFamilyCode],
     $eePath,
     function ($output) { }
 );
