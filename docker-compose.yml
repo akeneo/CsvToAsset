@@ -1,5 +1,4 @@
 version: '3.4'
-
 services:
   php:
     image: 'akeneo/pim-dev/php:7.3'

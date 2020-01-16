@@ -1,0 +1,13 @@
+version: '3.4'
+services:
+  php:
+    volumes:
+      - './:/srv/csv-to-asset'
+      - '${HOST_COMPOSER_HOME:-~/.composer}:/var/www/.composer'
+      - '/path/to/ee/:/srv/ee'
+    networks:
+      - 'pim'
+
+networks:
+  pim:
+    external: true

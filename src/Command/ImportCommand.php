@@ -9,6 +9,7 @@ use App\ApiClientFactory;
 use App\FileLogger;
 use App\Processor\Converter\DataConverter;
 use App\Processor\AssetProcessor;
+use App\Reader\CredentialReader;
 use App\Reader\CsvReader;
 use App\Writer\AssetWriter;
 use Box\Spout\Common\Exception\IOException;
@@ -61,6 +62,9 @@ class ImportCommand extends Command
     /** @var AkeneoPimEnterpriseClientInterface */
     private $apiClient;
 
+    /** @var AkeneoPimEnterpriseClientBuilder */
+    private $apiClientBuilder;
+
     /** @var CsvReader */
     private $reader;
 
@@ -70,7 +74,7 @@ class ImportCommand extends Command
         AssetProcessor $processor,
         FileLogger $logger,
         InvalidFileGenerator $invalidFileGenerator,
-        AkeneoPimEnterpriseClientInterface $apiClient
+        AkeneoPimEnterpriseClientBuilder $apiClientBuilder
     ) {
         parent::__construct(static::$defaultName);
 
@@ -79,7 +83,7 @@ class ImportCommand extends Command
         $this->processor = $processor;
         $this->logger = $logger;
         $this->invalidFileGenerator = $invalidFileGenerator;
-        $this->apiClient = $apiClient;
+        $this->apiClientBuilder = $apiClientBuilder;
     }
 
     protected function configure()
@@ -88,10 +92,6 @@ class ImportCommand extends Command
             ->setDescription('Import a CSV file as Asset Family Assets')
             ->addArgument('filePath', InputArgument::REQUIRED, 'The filePath of the file to import.')
             ->addArgument('assetFamilyCode', InputArgument::REQUIRED, 'The asset family code the assets belong to.')
-            ->addOption('apiUsername', null, InputOption::VALUE_OPTIONAL, 'The username of the user.', getenv('AKENEO_API_USERNAME'))
-            ->addOption('apiPassword', null, InputOption::VALUE_OPTIONAL, 'The password of the user.', getenv('AKENEO_API_PASSWORD'))
-            ->addOption('apiClientId', null, InputOption::VALUE_OPTIONAL, '', getenv('AKENEO_API_CLIENT_ID'))
-            ->addOption('apiClientSecret', null, InputOption::VALUE_OPTIONAL, '', getenv('AKENEO_API_CLIENT_SECRET'))
         ;
     }
 
@@ -99,6 +99,14 @@ class ImportCommand extends Command
     {
         $this->io = new SymfonyStyle($input, $output);
         $this->logger->startLogging();
+
+        $credentials = CredentialReader::read();
+        $this->apiClient = $this->apiClientBuilder->buildAuthenticatedByPassword(
+            $credentials['clientId'],
+            $credentials['secret'],
+            $credentials['username'],
+            $credentials['password']
+        );
 
         $assetFamilyCode = $input->getArgument('assetFamilyCode');
         $filePath = $input->getArgument('filePath');
