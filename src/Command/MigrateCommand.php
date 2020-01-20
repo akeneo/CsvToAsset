@@ -2,15 +2,6 @@
 
 declare(strict_types=1);
 
-/*
- * This file is part of the Akeneo PIM Enterprise Edition.
- *
- * (c) 2020 Akeneo SAS (http://www.akeneo.com)
- *
- * For the full copyright and license information, please view the LICENSE
- * file that was distributed with this source code.
- */
-
 namespace App\Command;
 
 use App\Reader\CsvReader;
@@ -38,16 +29,22 @@ class MigrateCommand extends Command
     private const NON_LOCALIZABLE = 'non-localizable';
     private const BOTH = 'both';
     private const AUTO = 'auto';
+    private const YES = 'yes';
+    private const NO = 'no';
 
     private const CSV_FIELD_DELIMITER = ';';
     private const CSV_FIELD_ENCLOSURE = '"';
     private const CSV_END_OF_LINE_CHARACTER = "\n";
+
 
     /** @var string */
     private $assetFamilyCode;
 
     /** @var SymfonyStyle */
     private $io;
+
+    /** @var CsvReader */
+    private $csvReader;
 
     public function __construct(
         CreateFamilyCommand $createFamilyCommand,
@@ -69,12 +66,27 @@ class MigrateCommand extends Command
             ->addOption('reference-type', null, InputOption::VALUE_OPTIONAL,
                 sprintf(
                     'Enable if reference is localizable or not. 
-When set to %s, it will guess the value from the assets file content.
+When set to "%s", it will guess the value from the assets file content.
 Allowed values: %s|%s|%s|%s',
                     self::LOCALIZABLE,
                     self::NON_LOCALIZABLE,
                     self::BOTH,
                     self::AUTO,
+                    self::AUTO
+                ),
+                self::AUTO
+            )
+            ->addOption('with-categories', null, InputOption::VALUE_OPTIONAL,
+                sprintf(
+                    'Import the categories from your assets file.
+When set to "%s", your new asset family will have a categories field, and every asset will contains its former categories.
+When set to "%s", it will guess the value from the asset file content.
+It will only create the categories field if more than 1 category is found in the assets file.
+Allowed values: %s|%s|%s',
+                    self::YES,
+                    self::AUTO,
+                    self::YES,
+                    self::NO,
                     self::AUTO
                 ),
                 self::AUTO
@@ -91,24 +103,33 @@ Allowed values: %s|%s|%s|%s',
         $variationsCsvFilename = $input->getArgument('variations-csv-filename');
 
         $referenceType = $input->getOption('reference-type');
-        if (!in_array($referenceType, [self::LOCALIZABLE, self::NON_LOCALIZABLE, self::BOTH, self::AUTO])) {
-            throw new \InvalidArgumentException(sprintf(
-                'Argument "reference-type" should be "%s", "%s", "%s" or "%s".',
-                self::LOCALIZABLE,
-                self::NON_LOCALIZABLE,
-                self::BOTH,
-                self::AUTO
-            ));
-        }
+        ArgumentChecker::assertOptionIsAllowed($referenceType, 'reference-type', [self::LOCALIZABLE, self::NON_LOCALIZABLE, self::BOTH, self::AUTO]);
+
+        $withCategories = $input->getOption('with-categories');
+        ArgumentChecker::assertOptionIsAllowed($withCategories, 'with-categories', [self::YES, self::NO, self::AUTO]);
 
         if ($referenceType === self::AUTO) {
             $referenceType = $this->guessReferenceType($assetCsvFilename);
         }
 
+        if ($withCategories === self::AUTO) {
+            $withCategories = $this->guessWithCategories($assetCsvFilename);
+        }
+
         $tmpfname = tempnam('/tmp', 'migration_target_');
 
-        $this->executeCommand('app:create-family', [$this->assetFamilyCode, sprintf('--reference-type=%s', $referenceType)]);
-        $this->executeCommand('app:merge-files', [$assetCsvFilename, $variationsCsvFilename, $tmpfname, sprintf('--reference-type=%s', $referenceType)]);
+        $this->executeCommand('app:create-family', [
+            $this->assetFamilyCode,
+            sprintf('--reference-type=%s', $referenceType),
+            sprintf('--with-categories=%s', $withCategories)
+        ]);
+        $this->executeCommand('app:merge-files', [
+            $assetCsvFilename,
+            $variationsCsvFilename,
+            $tmpfname,
+            sprintf('--reference-type=%s', $referenceType),
+            sprintf('--with-categories=%s', $withCategories)
+        ]);
         $this->executeCommand('app:import', [$tmpfname, $this->assetFamilyCode]);
 
         $this->io->success('Migration success!');
@@ -139,13 +160,7 @@ Allowed values: %s|%s|%s|%s',
     {
         try {
             $this->io->writeln('The script will now guess if your assets are localizable, non localizable or both...');
-            $assetsReader = new CsvReader(
-                $assetCsvFilename, [
-                    'fieldDelimiter' => self::CSV_FIELD_DELIMITER,
-                    'fieldEnclosure' => self::CSV_FIELD_ENCLOSURE,
-                    'endOfLineCharacter' => self::CSV_END_OF_LINE_CHARACTER,
-                ]
-            );
+            $assetsReader = $this->getReader($assetCsvFilename);
 
             $headers = $assetsReader->getHeaders();
             $foundLocalized = false;
@@ -192,8 +207,62 @@ Allowed values: %s|%s|%s|%s',
         }
     }
 
+    private function guessWithCategories(string $assetCsvFilename): string
+    {
+        try {
+            $this->io->writeln('The script will now guess if the categories field need to be imported...');
+            $assetsReader = $this->getReader($assetCsvFilename);
+
+            $headers = $assetsReader->getHeaders();
+            $categories = [];
+            foreach ($assetsReader as $assetLineNumber => $row) {
+                if ($assetLineNumber === 1) {
+                    continue;
+                }
+
+                if (!$this->isHeaderValid($assetsReader, $row)) {
+                    continue;
+                }
+
+                $assetLine = array_combine($headers, $row);
+                $assetCategories = explode(',', $assetLine['categories']);
+                $categories = array_unique(array_merge($categories, $assetCategories));
+
+                if (count($categories) > 1) {
+                    $this->io->writeln('More than 1 categories was found in the assets file, it will import the categories.');
+
+                    return self::YES;
+                }
+            }
+
+            $this->io->writeln(sprintf('%d category was found in the assets file, it will not import the categories.', count($categories)));
+
+            return self::NO;
+        } catch (IOException|UnsupportedTypeException|ReaderNotOpenedException $e) {
+            $this->io->error($e->getMessage());
+
+            exit(1);
+        }
+    }
+
     private function isHeaderValid(CsvReader $reader, $row)
     {
         return count($reader->getHeaders()) === count($row);
+    }
+
+    private function getReader(string $assetCsvFilename): CsvReader
+    {
+        if ($this->csvReader === null) {
+            $this->csvReader = new CsvReader(
+                $assetCsvFilename, [
+                    'fieldDelimiter' => self::CSV_FIELD_DELIMITER,
+                    'fieldEnclosure' => self::CSV_FIELD_ENCLOSURE,
+                    'endOfLineCharacter' => self::CSV_END_OF_LINE_CHARACTER,
+            ]);
+        } else {
+            $this->csvReader->rewind();
+        }
+
+        return $this->csvReader;
     }
 }

@@ -41,6 +41,10 @@ class MergeAssetsAndVariationsFilesCommand extends Command
     private const NON_LOCALIZABLE = 'non-localizable';
     private const BOTH = 'both';
 
+    private const CATEGORIES = 'categories';
+    private const YES = 'yes';
+    private const NO = 'no';
+
     /** @var SymfonyStyle */
     private $io;
 
@@ -65,6 +69,9 @@ class MergeAssetsAndVariationsFilesCommand extends Command
     /** @var string */
     private $referenceType;
 
+    /** @var string */
+    private $withCategories;
+
     protected function configure()
     {
         $this
@@ -81,6 +88,14 @@ class MergeAssetsAndVariationsFilesCommand extends Command
                 ),
                 self::BOTH
             )
+            ->addOption('with-categories', null, InputOption::VALUE_OPTIONAL,
+                sprintf('Add the "%s" column to the merged file or not to import it to the generated assets. Allowed values: %s|%s',
+                    self::CATEGORIES,
+                    self::YES,
+                    self::NO
+                ),
+                self::YES
+            )
         ;
     }
 
@@ -94,20 +109,24 @@ class MergeAssetsAndVariationsFilesCommand extends Command
         $this->variationsFilePath = $variationsFilePath;
 
         $this->referenceType = $input->getOption('reference-type');
-        if (!in_array($this->referenceType, [self::LOCALIZABLE, self::NON_LOCALIZABLE, self::BOTH])) {
-            throw new \InvalidArgumentException(sprintf(
-                'Argument "reference-type" should be "%s", "%s" or "%s".',
-                self::LOCALIZABLE,
-                self::NON_LOCALIZABLE,
-                self::BOTH
-            ));
-        }
+        ArgumentChecker::assertOptionIsAllowed($this->referenceType, 'reference-type', [self::LOCALIZABLE, self::NON_LOCALIZABLE, self::BOTH]);
+
+        $this->withCategories = $input->getOption('with-categories');
+        ArgumentChecker::assertOptionIsAllowed($this->withCategories, 'with-categories', [self::YES, self::NO]);
 
         $this->io->title('Merge PAM Assets CSV file with PAM Variation CSV file');
         $this->io->text([
             sprintf('This command will merge a given PAM Asset CSV file with a given Variations CSV file into one single file: "%s"', $targetFilePath),
             'This file will be importable via the command "app:import"'
         ]);
+
+        if ($this->withCategories === self::NO) {
+            $this->io->text([
+                sprintf('This command will remove the column "%s" of the "%s" file before merging the files.',
+                self::CATEGORIES,
+                $assetsFilePath)
+            ]);
+        }
 
         $hasValidFilePaths = $this->hasValidFilePaths($assetsFilePath, $variationsFilePath);
         if (!$hasValidFilePaths) {
@@ -201,6 +220,15 @@ class MergeAssetsAndVariationsFilesCommand extends Command
     private function getAssetManagerFileHeaders(): array
     {
         $assetHeaders = $this->assetsReader->getHeaders();
+
+        if ($this->withCategories === self::NO) {
+            // Removes the "categories" field from headers
+            $index = array_search(self::CATEGORIES, $assetHeaders);
+            if ($index !== FALSE){
+                unset($assetHeaders[$index]);
+            }
+        }
+
         $valuesHeaders = [];
         foreach ($this->channels as $channel) {
             if ($this->referenceType === self::NON_LOCALIZABLE || $this->referenceType === self::BOTH) {
