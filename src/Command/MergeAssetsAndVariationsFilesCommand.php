@@ -109,10 +109,10 @@ class MergeAssetsAndVariationsFilesCommand extends Command
         $this->variationsFilePath = $variationsFilePath;
 
         $this->referenceType = $input->getOption('reference-type');
-        ArgumentChecker::check($this->referenceType, 'reference-type', [self::LOCALIZABLE, self::NON_LOCALIZABLE, self::BOTH]);
+        ArgumentChecker::assertOptionIsAllowed($this->referenceType, 'reference-type', [self::LOCALIZABLE, self::NON_LOCALIZABLE, self::BOTH]);
 
         $this->withCategories = $input->getOption('with-categories');
-        ArgumentChecker::check($this->withCategories, 'with-categories', [self::YES, self::NO]);
+        ArgumentChecker::assertOptionIsAllowed($this->withCategories, 'with-categories', [self::YES, self::NO]);
 
         $this->io->title('Merge PAM Assets CSV file with PAM Variation CSV file');
         $this->io->text([

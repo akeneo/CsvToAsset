@@ -2,15 +2,6 @@
 
 declare(strict_types=1);
 
-/*
- * This file is part of the Akeneo PIM Enterprise Edition.
- *
- * (c) 2020 Akeneo SAS (http://www.akeneo.com)
- *
- * For the full copyright and license information, please view the LICENSE
- * file that was distributed with this source code.
- */
-
 namespace App\Command;
 
 use App\Reader\CsvReader;
@@ -75,7 +66,7 @@ class MigrateCommand extends Command
             ->addOption('reference-type', null, InputOption::VALUE_OPTIONAL,
                 sprintf(
                     'Enable if reference is localizable or not. 
-When set to %s, it will guess the value from the assets file content.
+When set to "%s", it will guess the value from the assets file content.
 Allowed values: %s|%s|%s|%s',
                     self::LOCALIZABLE,
                     self::NON_LOCALIZABLE,
@@ -88,8 +79,8 @@ Allowed values: %s|%s|%s|%s',
             ->addOption('with-categories', null, InputOption::VALUE_OPTIONAL,
                 sprintf(
                     'Import the categories from your assets file.
-When set to %s, your new asset family will have a categories field, and every asset will contains its former categories.
-When set to %s, it will guess the value from the asset file content.
+When set to "%s", your new asset family will have a categories field, and every asset will contains its former categories.
+When set to "%s", it will guess the value from the asset file content.
 It will only create the categories field if more than 1 category is found in the assets file.
 Allowed values: %s|%s|%s',
                     self::YES,
@@ -112,10 +103,10 @@ Allowed values: %s|%s|%s',
         $variationsCsvFilename = $input->getArgument('variations-csv-filename');
 
         $referenceType = $input->getOption('reference-type');
-        ArgumentChecker::check($referenceType, 'reference-type', [self::LOCALIZABLE, self::NON_LOCALIZABLE, self::BOTH, self::AUTO]);
+        ArgumentChecker::assertOptionIsAllowed($referenceType, 'reference-type', [self::LOCALIZABLE, self::NON_LOCALIZABLE, self::BOTH, self::AUTO]);
 
         $withCategories = $input->getOption('with-categories');
-        ArgumentChecker::check($withCategories, 'with-categories', [self::YES, self::NO, self::AUTO]);
+        ArgumentChecker::assertOptionIsAllowed($withCategories, 'with-categories', [self::YES, self::NO, self::AUTO]);
 
         if ($referenceType === self::AUTO) {
             $referenceType = $this->guessReferenceType($assetCsvFilename);

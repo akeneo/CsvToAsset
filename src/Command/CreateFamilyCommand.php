@@ -79,10 +79,10 @@ class CreateFamilyCommand extends Command
         $this->assetFamilyCode = $input->getArgument('asset-family-code');
 
         $referenceType = $input->getOption('reference-type');
-        ArgumentChecker::check($referenceType, 'reference-type', [self::LOCALIZABLE, self::NON_LOCALIZABLE, self::BOTH]);
+        ArgumentChecker::assertOptionIsAllowed($referenceType, 'reference-type', [self::LOCALIZABLE, self::NON_LOCALIZABLE, self::BOTH]);
 
         $withCategories = $input->getOption('with-categories');
-        ArgumentChecker::check($withCategories, 'with-categories', [self::YES, self::NO]);
+        ArgumentChecker::assertOptionIsAllowed($withCategories, 'with-categories', [self::YES, self::NO]);
 
         $credentials = CredentialReader::read();
         $this->client = $this->clientBuilder->buildAuthenticatedByPassword(
