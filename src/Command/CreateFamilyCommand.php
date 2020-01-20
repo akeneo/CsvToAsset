@@ -23,6 +23,7 @@ class CreateFamilyCommand extends Command
     private const ATTRIBUTE_REFERENCE = 'reference';
     private const ATTRIBUTE_REFERENCE_LOCALIZABLE = 'reference_localizable';
     private const CATEGORIES = 'categories';
+    private const TAGS = 'tags';
 
     private const YES = 'yes';
     private const NO = 'no';
@@ -73,6 +74,9 @@ class CreateFamilyCommand extends Command
             ->addOption('category-options', null, InputOption::VALUE_OPTIONAL,
                 sprintf('Create %s field as a "multiple_options" attribute with these options (comma-separated) instead of text attributes', self::CATEGORIES),
             )
+            ->addOption('tag-options', null, InputOption::VALUE_OPTIONAL,
+                sprintf('Create %s field as a "multiple_options" attribute with these options (comma-separated)', self::TAGS),
+            )
         ;
     }
 
@@ -89,11 +93,20 @@ class CreateFamilyCommand extends Command
 
         $categoryOptions = $input->getOption('category-options');
         if (!empty($categoryOptions)) {
-            $categoryOptions = array_filter(explode(',', $categoryOptions), function(string $categoryOption) {
+            $categoryOptions = array_filter(explode(',', $categoryOptions), function (string $categoryOption) {
                 return !empty($categoryOption);
             });
         } else {
             $categoryOptions = null;
+        }
+
+        $tagOptions = $input->getOption('tag-options');
+        if (!empty($tagOptions)) {
+            $tagOptions = array_filter(explode(',', $tagOptions), function (string $tagOption) {
+                return !empty($tagOption);
+            });
+        } else {
+            $tagOptions = null;
         }
 
         $credentials = CredentialReader::read();
@@ -137,7 +150,12 @@ class CreateFamilyCommand extends Command
             $this->io->writeln(sprintf('Skip creation of attribute "%s"...', self::CATEGORIES));
         }
 
-        $this->createAttribute('tags', 'text', false, false, false);
+        if ($tagOptions === null) {
+            $this->createAttribute(self::TAGS, 'text', false, false, false);
+        } else {
+            $this->createAttribute(self::TAGS, 'multiple_options', false, false, false);
+            $this->createTagOptions($tagOptions);
+        }
         $this->createAttribute('end_of_use', 'text', false, false, false);
 
         $attributeAsMainMedia = $referenceType === self::NON_LOCALIZABLE || $referenceType === self::BOTH ?
@@ -189,6 +207,16 @@ class CreateFamilyCommand extends Command
             $this->io->writeln(sprintf('Creation of attribute option "%s"...', $categoryOption));
             $this->client->getAssetAttributeOptionApi()->upsert($this->assetFamilyCode, self::CATEGORIES, $categoryOption, [
                 'code' => $categoryOption
+            ]);
+        }
+    }
+
+    private function createTagOptions(array $tagOptions)
+    {
+        foreach ($tagOptions as $tagOption) {
+            $this->io->writeln(sprintf('Creation of tag option "%s"...', $tagOption));
+            $this->client->getAssetAttributeOptionApi()->upsert($this->assetFamilyCode, self::TAGS, $tagOption, [
+                'code' => $tagOption
             ]);
         }
     }
