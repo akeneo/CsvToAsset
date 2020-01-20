@@ -167,7 +167,7 @@ class MigrateCommand extends Command
 
                 exit(1);
             } else if ($foundNonLocalized && $foundLocalized) {
-                $this->io->writeln(sprintf("Localized and non localized assets found, set reference type to %s.", self::BOTH));
+                $this->io->writeln(sprintf('Localized and non localized assets found, set reference type to "%s".', self::BOTH));
                 return self::BOTH;
             } else if ($foundLocalized) {
                 $this->io->writeln(sprintf("Only localized assets found, set reference type to %s.", self::LOCALIZABLE));

@@ -48,7 +48,7 @@ class CreateFamilyCommand extends Command
             ->addArgument('asset-family-code', InputArgument::REQUIRED, 'The asset family code to create')
             ->addOption('reference-type', null, InputOption::VALUE_OPTIONAL,
                 sprintf(
-                    'Enable if reference is localizable or not. Allowed values: %s|%s|%s',
+                    'Enable if image reference is localizable or not. Allowed values: %s|%s|%s',
                     self::LOCALIZABLE,
                     self::NON_LOCALIZABLE,
                     self::BOTH
