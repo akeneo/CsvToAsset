@@ -15,6 +15,7 @@ use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Helper\ProgressBar;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
@@ -35,6 +36,10 @@ class MergeAssetsAndVariationsFilesCommand extends Command
     private const VARIATION_FILE_FIELD = 'variation_scopable';
     private const LOCALIZED_REFERENCE_FILE_FIELD = 'reference_localizable';
     private const LOCALIZED_VARIATION_FILE_FIELD = 'variation_localizable_scopable';
+
+    private const LOCALIZABLE = 'localizable';
+    private const NON_LOCALIZABLE = 'non-localizable';
+    private const BOTH = 'both';
 
     /** @var SymfonyStyle */
     private $io;
@@ -57,13 +62,25 @@ class MergeAssetsAndVariationsFilesCommand extends Command
     /** @var string[] */
     private $locales = [];
 
+    /** @var string */
+    private $referenceType;
+
     protected function configure()
     {
         $this
             ->setDescription('Merge Assets & Variations CSV files into one')
-            ->addArgument('assetsFilePath', InputArgument::REQUIRED, 'Path to the Assets CSV file')
-            ->addArgument('variationsFilePath', InputArgument::REQUIRED, 'Path to the Variations CSV file path')
-            ->addArgument('targetFilePath', InputArgument::REQUIRED, 'The filePath to the new CSV file to create.')
+            ->addArgument('assets-file-path', InputArgument::REQUIRED, 'Path to the Assets CSV file')
+            ->addArgument('variations-file-path', InputArgument::REQUIRED, 'Path to the Variations CSV file path')
+            ->addArgument('target-file-path', InputArgument::REQUIRED, 'The filePath to the new CSV file to create.')
+            ->addOption('reference-type', null, InputOption::VALUE_OPTIONAL,
+                sprintf(
+                    'Enable if reference is localizable or not. Allowed values: %s|%s|%s.',
+                    self::LOCALIZABLE,
+                    self::NON_LOCALIZABLE,
+                    self::BOTH
+                ),
+                self::BOTH
+            )
         ;
     }
 
@@ -71,10 +88,20 @@ class MergeAssetsAndVariationsFilesCommand extends Command
     {
         $this->io = new SymfonyStyle($input, $output);
 
-        $assetsFilePath = $input->getArgument('assetsFilePath');
-        $variationsFilePath = $input->getArgument('variationsFilePath');
-        $targetFilePath = $input->getArgument('targetFilePath');
+        $assetsFilePath = $input->getArgument('assets-file-path');
+        $variationsFilePath = $input->getArgument('variations-file-path');
+        $targetFilePath = $input->getArgument('target-file-path');
         $this->variationsFilePath = $variationsFilePath;
+
+        $this->referenceType = $input->getOption('reference-type');
+        if (!in_array($this->referenceType, [self::LOCALIZABLE, self::NON_LOCALIZABLE, self::BOTH])) {
+            throw new \InvalidArgumentException(sprintf(
+                'Argument "reference-type" should be "%s", "%s" or "%s".',
+                self::LOCALIZABLE,
+                self::NON_LOCALIZABLE,
+                self::BOTH
+            ));
+        }
 
         $this->io->title('Merge PAM Assets CSV file with PAM Variation CSV file');
         $this->io->text([
@@ -176,12 +203,16 @@ class MergeAssetsAndVariationsFilesCommand extends Command
         $assetHeaders = $this->assetsReader->getHeaders();
         $valuesHeaders = [];
         foreach ($this->channels as $channel) {
-            $valuesHeaders[] = sprintf('%s-%s', self::REFERENCE_FILE_FIELD, $channel);
-            $valuesHeaders[] = sprintf('%s-%s', self::VARIATION_FILE_FIELD, $channel);
+            if ($this->referenceType === self::NON_LOCALIZABLE || $this->referenceType === self::BOTH) {
+                $valuesHeaders[] = sprintf('%s-%s', self::REFERENCE_FILE_FIELD, $channel);
+                $valuesHeaders[] = sprintf('%s-%s', self::VARIATION_FILE_FIELD, $channel);
+            }
 
-            foreach ($this->locales as $locale) {
-                $valuesHeaders[] = sprintf('%s-%s-%s', self::LOCALIZED_REFERENCE_FILE_FIELD, $locale, $channel);
-                $valuesHeaders[] = sprintf('%s-%s-%s', self::LOCALIZED_VARIATION_FILE_FIELD, $locale, $channel);
+            if ($this->referenceType === self::LOCALIZABLE || $this->referenceType === self::BOTH) {
+                foreach ($this->locales as $locale) {
+                    $valuesHeaders[] = sprintf('%s-%s-%s', self::LOCALIZED_REFERENCE_FILE_FIELD, $locale, $channel);
+                    $valuesHeaders[] = sprintf('%s-%s-%s', self::LOCALIZED_VARIATION_FILE_FIELD, $locale, $channel);
+                }
             }
         }
 
@@ -230,11 +261,28 @@ class MergeAssetsAndVariationsFilesCommand extends Command
 
         foreach ($variations as $variation) {
             if (!empty($variation['locale'])) {
-                $structure[sprintf('%s-%s-%s', self::LOCALIZED_REFERENCE_FILE_FIELD, $variation['locale'], $variation['channel'])] = $variation['reference_file'];
-                $structure[sprintf('%s-%s-%s', self::LOCALIZED_VARIATION_FILE_FIELD, $variation['locale'], $variation['channel'])] = $variation['variation_file'];
+                if ($this->referenceType === self::LOCALIZABLE || $this->referenceType === self::BOTH) {
+                    $structure[sprintf('%s-%s-%s', self::LOCALIZED_REFERENCE_FILE_FIELD, $variation['locale'], $variation['channel'])] = $variation['reference_file'];
+                    $structure[sprintf('%s-%s-%s', self::LOCALIZED_VARIATION_FILE_FIELD, $variation['locale'], $variation['channel'])] = $variation['variation_file'];
+                } else {
+                    throw new \RuntimeException(sprintf(
+                        "The merge script encountered an issue with \"%s\".
+                        \nThis line contains a locale (\"%s\") but there is no localizable fields in your asset family.",
+                        json_encode($variation),
+                        $variation['locale']
+                    ));
+                }
             } else {
-                $structure[sprintf('%s-%s', self::REFERENCE_FILE_FIELD, $variation['channel'])] = $variation['reference_file'];
-                $structure[sprintf('%s-%s', self::VARIATION_FILE_FIELD, $variation['channel'])] = $variation['variation_file'];
+                if ($this->referenceType === self::NON_LOCALIZABLE || $this->referenceType === self::BOTH) {
+                    $structure[sprintf('%s-%s', self::REFERENCE_FILE_FIELD, $variation['channel'])] = $variation['reference_file'];
+                    $structure[sprintf('%s-%s', self::VARIATION_FILE_FIELD, $variation['channel'])] = $variation['variation_file'];
+                } else {
+                    throw new \RuntimeException(sprintf(
+                        "The merge script encountered an issue with \"%s\".
+                        \nThis line does not contains any value in the locale column, but this value is needed for the asset family.",
+                        json_encode($variation)
+                    ));
+                }
             }
         }
 

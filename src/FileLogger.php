@@ -75,7 +75,7 @@ class FileLogger
                     if (isset($response['code']) && isset($response['errors'])) {
                         $this->skip(
                             sprintf(
-                                'Skipped record "%s", an error occured during import: %s',
+                                'Skipped record "%s", an error occurred during import: %s',
                                 $response['code'],
                                 json_encode($response['errors'])
                             )

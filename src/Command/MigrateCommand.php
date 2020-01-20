@@ -13,9 +13,14 @@ declare(strict_types=1);
 
 namespace App\Command;
 
+use App\Reader\CsvReader;
+use Box\Spout\Common\Exception\IOException;
+use Box\Spout\Common\Exception\UnsupportedTypeException;
+use Box\Spout\Reader\Exception\ReaderNotOpenedException;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Component\Process\Process;
@@ -28,6 +33,15 @@ class MigrateCommand extends Command
     protected static $defaultName = 'app:migrate';
     private const ASSETS_CSV_FILENAME = '/tmp/assets.csv';
     private const VARIATIONS_CSV_FILENAME = '/tmp/variations.csv';
+
+    private const LOCALIZABLE = 'localizable';
+    private const NON_LOCALIZABLE = 'non-localizable';
+    private const BOTH = 'both';
+    private const AUTO = 'auto';
+
+    private const CSV_FIELD_DELIMITER = ';';
+    private const CSV_FIELD_ENCLOSURE = '"';
+    private const CSV_END_OF_LINE_CHARACTER = "\n";
 
     /** @var string */
     private $assetFamilyCode;
@@ -45,10 +59,26 @@ class MigrateCommand extends Command
     protected function configure()
     {
         $this
-            ->setDescription('Migrate a complete family')
+            ->setDescription("Migrate a complete family
+    If you only have non localizable assets, it will create and migrate an asset family with a non localizable reference and non localizable variations.
+    If you only have localizable assets, it will create and migrate an asset family with localizable reference and localizable variations.
+    If you have localizable and non localizable assets, it will create an asset family with both fields.")
             ->addArgument('asset-family-code', InputArgument::REQUIRED, 'The asset family code to migrate')
             ->addArgument('assets-csv-filename', InputArgument::OPTIONAL, 'The path to the Assets CSV file', self::ASSETS_CSV_FILENAME)
             ->addArgument('variations-csv-filename', InputArgument::OPTIONAL, 'The path to the Variations CSV file', self::VARIATIONS_CSV_FILENAME)
+            ->addOption('reference-type', null, InputOption::VALUE_OPTIONAL,
+                sprintf(
+                    'Enable if reference is localizable or not. 
+When set to %s, it will guess the value from the assets file content.
+Allowed values: %s|%s|%s|%s',
+                    self::LOCALIZABLE,
+                    self::NON_LOCALIZABLE,
+                    self::BOTH,
+                    self::AUTO,
+                    self::AUTO
+                ),
+                self::AUTO
+            )
         ;
     }
 
@@ -60,10 +90,25 @@ class MigrateCommand extends Command
         $assetCsvFilename = $input->getArgument('assets-csv-filename');
         $variationsCsvFilename = $input->getArgument('variations-csv-filename');
 
+        $referenceType = $input->getOption('reference-type');
+        if (!in_array($referenceType, [self::LOCALIZABLE, self::NON_LOCALIZABLE, self::BOTH, self::AUTO])) {
+            throw new \InvalidArgumentException(sprintf(
+                'Argument "reference-type" should be "%s", "%s", "%s" or "%s".',
+                self::LOCALIZABLE,
+                self::NON_LOCALIZABLE,
+                self::BOTH,
+                self::AUTO
+            ));
+        }
+
+        if ($referenceType === self::AUTO) {
+            $referenceType = $this->guessReferenceType($assetCsvFilename);
+        }
+
         $tmpfname = tempnam('/tmp', 'migration_target_');
 
-        $this->executeCommand('app:create-family', [$this->assetFamilyCode]);
-        $this->executeCommand('app:merge-files', [$assetCsvFilename, $variationsCsvFilename, $tmpfname]);
+        $this->executeCommand('app:create-family', [$this->assetFamilyCode, sprintf('--reference-type=%s', $referenceType)]);
+        $this->executeCommand('app:merge-files', [$assetCsvFilename, $variationsCsvFilename, $tmpfname, sprintf('--reference-type=%s', $referenceType)]);
         $this->executeCommand('app:import', [$tmpfname, $this->assetFamilyCode]);
 
         $this->io->success('Migration success!');
@@ -77,7 +122,7 @@ class MigrateCommand extends Command
 
         $process->run();
         if ($process->getExitCode() > 0) {
-            $this->io->error('An error occured during migration');
+            $this->io->error('An error occurred during migration');
             if ($process->getErrorOutput() !== '') {
                 $this->io->error($process->getErrorOutput());
             }
@@ -88,5 +133,67 @@ class MigrateCommand extends Command
             $output = $process->getOutput();
             $this->io->write($output);
         }
+    }
+
+    private function guessReferenceType(string $assetCsvFilename): string
+    {
+        try {
+            $this->io->writeln('The script will now guess if your assets are localizable, non localizable or both...');
+            $assetsReader = new CsvReader(
+                $assetCsvFilename, [
+                    'fieldDelimiter' => self::CSV_FIELD_DELIMITER,
+                    'fieldEnclosure' => self::CSV_FIELD_ENCLOSURE,
+                    'endOfLineCharacter' => self::CSV_END_OF_LINE_CHARACTER,
+                ]
+            );
+
+            $headers = $assetsReader->getHeaders();
+            $foundLocalized = false;
+            $foundNonLocalized = false;
+            foreach ($assetsReader as $assetLineNumber => $row) {
+                if ($assetLineNumber === 1) {
+                    continue;
+                }
+
+                if (!$this->isHeaderValid($assetsReader, $row)) {
+                    continue;
+                }
+
+                $assetLine = array_combine($headers, $row);
+                $localized = $assetLine['localized'];
+                if ($localized === '1') {
+                    $foundLocalized = true;
+                } else {
+                    $foundNonLocalized = true;
+                }
+            }
+
+            if (!$foundLocalized && !$foundNonLocalized) {
+                $this->io->error('No assets found. This script can not guess the reference type.');
+
+                exit(1);
+            } else if ($foundNonLocalized && $foundLocalized) {
+                $this->io->writeln(sprintf('Found localized and non localized assets, set reference type to "%s".', self::BOTH));
+
+                return self::BOTH;
+            } else if ($foundLocalized) {
+                $this->io->writeln(sprintf('Only found localized assets, set reference type to "%s".', self::LOCALIZABLE));
+
+                return self::LOCALIZABLE;
+            } else {
+                $this->io->writeln(sprintf('Only found non localized assets, set reference type to "%s".', self::NON_LOCALIZABLE));
+
+                return self::NON_LOCALIZABLE;
+            }
+        } catch (IOException|UnsupportedTypeException|ReaderNotOpenedException $e) {
+            $this->io->error($e->getMessage());
+
+            exit(1);
+        }
+    }
+
+    private function isHeaderValid(CsvReader $reader, $row)
+    {
+        return count($reader->getHeaders()) === count($row);
     }
 }
