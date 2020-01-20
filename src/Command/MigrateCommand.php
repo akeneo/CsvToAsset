@@ -223,7 +223,11 @@ Allowed values: %s|%s|%s',
     private function executeCommand($name, $arguments)
     {
         $process = new Process(
-            array_merge(['bin/console', $name], $arguments)
+            array_merge(['bin/console', $name], $arguments),
+			null,
+			null,
+			null,
+			null // Disable timeout
         );
 
         $process->run();
