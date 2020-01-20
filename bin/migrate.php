@@ -53,7 +53,7 @@ function executeCommand($arguments, $path, $callback)
     $process->run();
 
     if ($process->getExitCode() > 0) {
-        $io->error('An error occured during migration');
+        $io->error('An error occurred during migration');
         if ($process->getErrorOutput() !== '') {
             $io->error($process->getErrorOutput());
         }

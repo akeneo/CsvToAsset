@@ -59,16 +59,22 @@ class MigrateCommand extends Command
     protected function configure()
     {
         $this
-            ->setDescription('Migrate a complete family')
+            ->setDescription("Migrate a complete family
+    If you only have non localizable assets, it will create and migrate an asset family with a non localizable reference and non localizable variations.
+    If you only have localizable assets, it will create and migrate an asset family with localizable reference and localizable variations.
+    If you have localizable and non localizable assets, it will create an asset family with both fields.")
             ->addArgument('asset-family-code', InputArgument::REQUIRED, 'The asset family code to migrate')
             ->addArgument('assets-csv-filename', InputArgument::OPTIONAL, 'The path to the Assets CSV file', self::ASSETS_CSV_FILENAME)
             ->addArgument('variations-csv-filename', InputArgument::OPTIONAL, 'The path to the Variations CSV file', self::VARIATIONS_CSV_FILENAME)
             ->addOption('reference-type', null, InputOption::VALUE_OPTIONAL,
                 sprintf(
-                    'Enable if reference is localizable or not. Allowed values: %s|%s|%s|%s',
+                    'Enable if reference is localizable or not. 
+When set to %s, it will guess the value from the assets file content.
+Allowed values: %s|%s|%s|%s',
                     self::LOCALIZABLE,
                     self::NON_LOCALIZABLE,
                     self::BOTH,
+                    self::AUTO,
                     self::AUTO
                 ),
                 self::AUTO
@@ -116,7 +122,7 @@ class MigrateCommand extends Command
 
         $process->run();
         if ($process->getExitCode() > 0) {
-            $this->io->error('An error occured during migration');
+            $this->io->error('An error occurred during migration');
             if ($process->getErrorOutput() !== '') {
                 $this->io->error($process->getErrorOutput());
             }
@@ -132,7 +138,7 @@ class MigrateCommand extends Command
     private function guessReferenceType(string $assetCsvFilename): string
     {
         try {
-            $this->io->writeln("The script will now guess if your assets are localizable, non localizable or both...");
+            $this->io->writeln('The script will now guess if your assets are localizable, non localizable or both...');
             $assetsReader = new CsvReader(
                 $assetCsvFilename, [
                     'fieldDelimiter' => self::CSV_FIELD_DELIMITER,
@@ -167,13 +173,16 @@ class MigrateCommand extends Command
 
                 exit(1);
             } else if ($foundNonLocalized && $foundLocalized) {
-                $this->io->writeln(sprintf('Localized and non localized assets found, set reference type to "%s".', self::BOTH));
+                $this->io->writeln(sprintf('Found localized and non localized assets, set reference type to "%s".', self::BOTH));
+
                 return self::BOTH;
             } else if ($foundLocalized) {
-                $this->io->writeln(sprintf("Only localized assets found, set reference type to %s.", self::LOCALIZABLE));
+                $this->io->writeln(sprintf('Only found localized assets, set reference type to "%s".', self::LOCALIZABLE));
+
                 return self::LOCALIZABLE;
             } else {
-                $this->io->writeln(sprintf("Only non localized assets found, set reference type to %s.", self::NON_LOCALIZABLE));
+                $this->io->writeln(sprintf('Only found non localized assets, set reference type to "%s".', self::NON_LOCALIZABLE));
+
                 return self::NON_LOCALIZABLE;
             }
         } catch (IOException|UnsupportedTypeException|ReaderNotOpenedException $e) {

@@ -74,7 +74,7 @@ class MergeAssetsAndVariationsFilesCommand extends Command
             ->addArgument('target-file-path', InputArgument::REQUIRED, 'The filePath to the new CSV file to create.')
             ->addOption('reference-type', null, InputOption::VALUE_OPTIONAL,
                 sprintf(
-                    'Enable if reference is localizable or not. Allowed values: %s|%s|%s',
+                    'Enable if reference is localizable or not. Allowed values: %s|%s|%s.',
                     self::LOCALIZABLE,
                     self::NON_LOCALIZABLE,
                     self::BOTH
@@ -279,7 +279,7 @@ class MergeAssetsAndVariationsFilesCommand extends Command
                 } else {
                     throw new \RuntimeException(sprintf(
                         "The merge script encountered an issue with \"%s\".
-                        \nThis line contains does not contains any value in the locale column, but this value is needed but it is needed for the asset family.",
+                        \nThis line does not contains any value in the locale column, but this value is needed for the asset family.",
                         json_encode($variation)
                     ));
                 }

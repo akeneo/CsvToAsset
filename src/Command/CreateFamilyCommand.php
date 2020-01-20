@@ -19,6 +19,8 @@ class CreateFamilyCommand extends Command
     private const LOCALIZABLE = 'localizable';
     private const NON_LOCALIZABLE = 'non-localizable';
     private const BOTH = 'both';
+    private const ATTRIBUTE_REFERENCE = 'reference';
+    private const ATTRIBUTE_REFERENCE_LOCALIZABLE = 'reference_localizable';
 
     protected static $defaultName = 'app:create-family';
 
@@ -88,20 +90,16 @@ class CreateFamilyCommand extends Command
         ]);
 
         if ($referenceType === self::NON_LOCALIZABLE) {
-            $this->createAttribute('reference', 'media_file', false, true, false);
-            $this->createAttribute('variation_scopable', 'media_file', false, true, false);
+            $this->createNonLocalizableAttributes();
         };
 
         if ($referenceType === self::LOCALIZABLE) {
-            $this->createAttribute('reference_localizable', 'media_file', true, true, false);
-            $this->createAttribute('variation_localizable_scopable', 'media_file', true, true, false);
+            $this->createLocalizableAttributes();
         }
 
         if ($referenceType === self::BOTH) {
-            $this->createAttribute('reference', 'media_file', false, true, false);
-            $this->createAttribute('variation_scopable', 'media_file', false, true, false);
-            $this->createAttribute('reference_localizable', 'media_file', true, true, false);
-            $this->createAttribute('variation_localizable_scopable', 'media_file', true, true, false);
+            $this->createNonLocalizableAttributes();
+            $this->createLocalizableAttributes();
         }
 
         $this->createAttribute('description', 'text', false, false, false);
@@ -109,7 +107,9 @@ class CreateFamilyCommand extends Command
         $this->createAttribute('tags', 'text', false, false, false);
         $this->createAttribute('end_of_use', 'text', false, false, false);
 
-        $attributeAsMainMedia = $referenceType === self::NON_LOCALIZABLE || $referenceType === self::BOTH ? 'reference' : 'reference_localizable';
+        $attributeAsMainMedia = $referenceType === self::NON_LOCALIZABLE || $referenceType === self::BOTH ?
+            self::ATTRIBUTE_REFERENCE :
+            self::ATTRIBUTE_REFERENCE_LOCALIZABLE;
         $this->io->writeln(sprintf('Update "%s" attribute as main media...', $attributeAsMainMedia));
 
         $this->client->getAssetFamilyApi()->upsert($this->assetFamilyCode, [
@@ -136,5 +136,17 @@ class CreateFamilyCommand extends Command
         }
 
         $this->client->getAssetAttributeApi()->upsert($this->assetFamilyCode, $attributeCode, $data);
+    }
+
+    private function createNonLocalizableAttributes()
+    {
+        $this->createAttribute(self::ATTRIBUTE_REFERENCE, 'media_file', false, true, false);
+        $this->createAttribute('variation_scopable', 'media_file', false, true, false);
+    }
+
+    private function createLocalizableAttributes()
+    {
+        $this->createAttribute(self::ATTRIBUTE_REFERENCE_LOCALIZABLE, 'media_file', true, true, false);
+        $this->createAttribute('variation_localizable_scopable', 'media_file', true, true, false);
     }
 }
