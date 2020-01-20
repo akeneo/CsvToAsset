@@ -39,6 +39,9 @@ class MigrateCommand extends Command
     private const CATEGORIES = 'categories';
     private const CATEGORY_LIMIT = 100;
 
+    private const TAGS = 'tags';
+    private const TAG_LIMIT = 100;
+
     /** @var string */
     private $assetFamilyCode;
 
@@ -113,6 +116,25 @@ Allowed values: %s|%s|%s',
                 ),
                 self::AUTO
             )
+            ->addOption('convert-tag-to-option', null, InputOption::VALUE_OPTIONAL,
+                sprintf('Import the tags as "multiple_options".
+When set to "%s", your new asset family will have a multiple options "%s" field.
+When set to "%s", your new asset family will have a text "%s" field.
+When set to "%s", it will guess the attribute type to set from the assets file content.
+It will use a multiple option field if you have less than %d different tags in your assets file.
+Allowed values: %s|%s|%s',
+                    self::YES,
+                    self::TAGS,
+                    self::NO,
+                    self::TAGS,
+                    self::AUTO,
+                    self::TAG_LIMIT,
+                    self::YES,
+                    self::NO,
+                    self::AUTO
+                ),
+                self::AUTO
+            )
         ;
     }
 
@@ -132,6 +154,9 @@ Allowed values: %s|%s|%s',
 
         $convertCategoryToOption = $input->getOption('convert-category-to-option');
         ArgumentChecker::assertOptionIsAllowed($convertCategoryToOption, 'convert-category-to-option', [self::YES, self::NO, self::AUTO]);
+
+        $convertTagToOption = $input->getOption('convert-tag-to-option');
+        ArgumentChecker::assertOptionIsAllowed($convertTagToOption, 'convert-tag-to-option', [self::YES, self::NO, self::AUTO]);
 
         if ($referenceType === self::AUTO) {
             $referenceType = $this->guessReferenceType($assetCsvFilename);
@@ -156,6 +181,19 @@ Allowed values: %s|%s|%s',
             }
         }
 
+        if ($convertTagToOption === self::AUTO || $convertCategoryToOption === self::YES) {
+            $tags = $this->getTags($assetCsvFilename);
+            if ($convertTagToOption === self::AUTO) {
+                if (count($categoryCodes) > self::TAG_LIMIT) {
+                    $this->io->writeln(sprintf('More than %s tags were found in the assets file, it will import the tags as text.', self::TAG_LIMIT));
+                    $convertTagToOption = self::NO;
+                } else {
+                    $this->io->writeln(sprintf('Less than %s tags were found in the assets file, it will import the tags as multiple options.', self::TAG_LIMIT));
+                    $convertTagToOption = self::YES;
+                }
+            }
+        }
+
         $tmpfname = tempnam('/tmp', 'migration_target_');
 
         $arguments = [
@@ -165,6 +203,9 @@ Allowed values: %s|%s|%s',
         ];
         if ($convertCategoryToOption === self::YES) {
             $arguments[] = sprintf('--category-options=%s', join(',', $categoryCodes));
+        }
+        if ($convertTagToOption === self::YES) {
+            $arguments[] = sprintf('--tag-options=%s', join(',', $tags));
         }
         $this->executeCommand('app:create-family', $arguments);
         $this->executeCommand('app:merge-files', [
@@ -336,6 +377,39 @@ Allowed values: %s|%s|%s',
             $this->io->writeln(sprintf('%d categories were found in the assets file.', count($categoryCodes)));
 
             return $categoryCodes;
+        } catch (IOException|UnsupportedTypeException|ReaderNotOpenedException $e) {
+            $this->io->error($e->getMessage());
+
+            exit(1);
+        }
+    }
+
+    private function getTags(string $assetCsvFilename): array
+    {
+        try {
+            $this->io->writeln('The script will now load the tags from your assets file...');
+            $assetsReader = $this->getReader($assetCsvFilename);
+
+            $headers = $assetsReader->getHeaders();
+            $tags = [];
+            foreach ($assetsReader as $assetLineNumber => $row) {
+                if ($assetLineNumber === 1) {
+                    continue;
+                }
+
+                if (!$this->isHeaderValid($assetsReader, $row)) {
+                    continue;
+                }
+
+                $assetLine = array_combine($headers, $row);
+                $assetTags = explode(',', $assetLine['tags']);
+                $tags = array_merge($tags, $assetTags);
+            }
+
+            $tags = array_unique($tags);
+            $this->io->writeln(sprintf('%d tags were found in the assets file.', count($tags)));
+
+            return $tags;
         } catch (IOException|UnsupportedTypeException|ReaderNotOpenedException $e) {
             $this->io->error($e->getMessage());
 
