@@ -36,6 +36,8 @@ class MigrateCommand extends Command
     private const CSV_FIELD_ENCLOSURE = '"';
     private const CSV_END_OF_LINE_CHARACTER = "\n";
 
+    private const CATEGORIES = 'categories';
+    private const CATEGORY_LIMIT = 100;
 
     /** @var string */
     private $assetFamilyCode;
@@ -77,14 +79,34 @@ Allowed values: %s|%s|%s|%s',
                 self::AUTO
             )
             ->addOption('with-categories', null, InputOption::VALUE_OPTIONAL,
-                sprintf(
-                    'Import the categories from your assets file.
-When set to "%s", your new asset family will have a categories field, and every asset will contains its former categories.
-When set to "%s", it will guess the value from the asset file content.
-It will only create the categories field if more than 1 category is found in the assets file.
+                sprintf('Import the categories from your assets file.
+When set to "%s", your new asset family will have a "%s" field, and every asset will contains its former categories.
+When set to "%s", it will guess the value from the assets file content.
+It will only create the "%s" field if more than 1 category is found in the assets file.
 Allowed values: %s|%s|%s',
                     self::YES,
+                    self::CATEGORIES,
                     self::AUTO,
+                    self::CATEGORIES,
+                    self::YES,
+                    self::NO,
+                    self::AUTO
+                ),
+                self::AUTO
+            )
+            ->addOption('convert-category-to-option', null, InputOption::VALUE_OPTIONAL,
+                sprintf('Import the categories as "multiple_options".
+When set to "%s", your new asset family will have a multiple options "%s" field.
+When set to "%s", your new asset family will have a text "%s" field.
+When set to "%s", it will guess the attribute type to set from the assets file content.
+It will use a multiple option field if you have less than %d different categories in your assets file.
+Allowed values: %s|%s|%s',
+                    self::YES,
+                    self::CATEGORIES,
+                    self::NO,
+                    self::CATEGORIES,
+                    self::AUTO,
+                    self::CATEGORY_LIMIT,
                     self::YES,
                     self::NO,
                     self::AUTO
@@ -108,6 +130,9 @@ Allowed values: %s|%s|%s',
         $withCategories = $input->getOption('with-categories');
         ArgumentChecker::assertOptionIsAllowed($withCategories, 'with-categories', [self::YES, self::NO, self::AUTO]);
 
+        $convertCategoryToOption = $input->getOption('convert-category-to-option');
+        ArgumentChecker::assertOptionIsAllowed($convertCategoryToOption, 'convert-category-to-option', [self::YES, self::NO, self::AUTO]);
+
         if ($referenceType === self::AUTO) {
             $referenceType = $this->guessReferenceType($assetCsvFilename);
         }
@@ -116,13 +141,32 @@ Allowed values: %s|%s|%s',
             $withCategories = $this->guessWithCategories($assetCsvFilename);
         }
 
+        if ($withCategories === self::YES &&
+            ($convertCategoryToOption === self::AUTO || $convertCategoryToOption === self::YES)
+        ) {
+            $categoryCodes = $this->getCategoryCodes($assetCsvFilename);
+            if ($convertCategoryToOption === self::AUTO) {
+                if (count($categoryCodes) > self::CATEGORY_LIMIT) {
+                    $this->io->writeln(sprintf('More than %s categories were found in the assets file, it will import the categories as text.', self::CATEGORY_LIMIT));
+                    $convertCategoryToOption = self::NO;
+                } else {
+                    $this->io->writeln(sprintf('Less than %s categories were found in the assets file, it will import the categories as multiple options.', self::CATEGORY_LIMIT));
+                    $convertCategoryToOption = self::YES;
+                }
+            }
+        }
+
         $tmpfname = tempnam('/tmp', 'migration_target_');
 
-        $this->executeCommand('app:create-family', [
+        $arguments = [
             $this->assetFamilyCode,
             sprintf('--reference-type=%s', $referenceType),
-            sprintf('--with-categories=%s', $withCategories)
-        ]);
+            sprintf('--with-categories=%s', $withCategories),
+        ];
+        if ($convertCategoryToOption === self::YES) {
+            $arguments[] = sprintf('--category-options=%s', join(',', $categoryCodes));
+        }
+        $this->executeCommand('app:create-family', $arguments);
         $this->executeCommand('app:merge-files', [
             $assetCsvFilename,
             $variationsCsvFilename,
@@ -264,5 +308,38 @@ Allowed values: %s|%s|%s',
         }
 
         return $this->csvReader;
+    }
+
+    private function getCategoryCodes(string $assetCsvFilename): array
+    {
+        try {
+            $this->io->writeln('The script will now load the categories from your assets file...');
+            $assetsReader = $this->getReader($assetCsvFilename);
+
+            $headers = $assetsReader->getHeaders();
+            $categoryCodes = [];
+            foreach ($assetsReader as $assetLineNumber => $row) {
+                if ($assetLineNumber === 1) {
+                    continue;
+                }
+
+                if (!$this->isHeaderValid($assetsReader, $row)) {
+                    continue;
+                }
+
+                $assetLine = array_combine($headers, $row);
+                $assetCategories = explode(',', $assetLine['categories']);
+                $categoryCodes = array_merge($categoryCodes, $assetCategories);
+            }
+
+            $categoryCodes = array_unique($categoryCodes);
+            $this->io->writeln(sprintf('%d categories were found in the assets file.', count($categoryCodes)));
+
+            return $categoryCodes;
+        } catch (IOException|UnsupportedTypeException|ReaderNotOpenedException $e) {
+            $this->io->error($e->getMessage());
+
+            exit(1);
+        }
     }
 }
