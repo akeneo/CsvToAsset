@@ -49,7 +49,7 @@ function executeCommand($arguments, $path, $callback)
 {
     $io = new SymfonyStyle(new ArgvInput(), new ConsoleOutput());
 
-    $process = new Process($arguments, $path);
+    $process = new Process($arguments, $path, null, null, null);
     $process->run();
 
     if ($process->getExitCode() > 0) {
@@ -73,7 +73,7 @@ executeCommand(
     function ($output) { }
 );
 
-const CLIENT_LABEL = 'csv-to-asset';
+const CLIENT_LABEL = 'migrations_pam';
 
 $credentials = CredentialReader::read();
 if (null === $credentials) {
