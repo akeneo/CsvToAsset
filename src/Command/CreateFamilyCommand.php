@@ -71,7 +71,7 @@ class CreateFamilyCommand extends Command
                 self::YES
             )
             ->addOption('category-options', null, InputOption::VALUE_OPTIONAL,
-                sprintf('Create %s field as a "multiple_options" attribute with these options (comma-separated)', self::CATEGORIES),
+                sprintf('Create %s field as a "multiple_options" attribute with these options (comma-separated) instead of text attributes', self::CATEGORIES),
             )
         ;
     }
