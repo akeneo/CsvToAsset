@@ -19,8 +19,13 @@ class CreateFamilyCommand extends Command
     private const LOCALIZABLE = 'localizable';
     private const NON_LOCALIZABLE = 'non-localizable';
     private const BOTH = 'both';
+
     private const ATTRIBUTE_REFERENCE = 'reference';
     private const ATTRIBUTE_REFERENCE_LOCALIZABLE = 'reference_localizable';
+    private const CATEGORIES = 'categories';
+
+    private const YES = 'yes';
+    private const NO = 'no';
 
     protected static $defaultName = 'app:create-family';
 
@@ -57,6 +62,14 @@ class CreateFamilyCommand extends Command
                 ),
                 self::BOTH
             )
+            ->addOption('with-categories', null, InputOption::VALUE_OPTIONAL,
+                sprintf('Create %s field or not. Allowed values: %s|%s',
+                    self::CATEGORIES,
+                    self::YES,
+                    self::NO
+                ),
+                self::YES
+            )
         ;
     }
 
@@ -64,15 +77,12 @@ class CreateFamilyCommand extends Command
     {
         $this->io = new SymfonyStyle($input, $output);
         $this->assetFamilyCode = $input->getArgument('asset-family-code');
+
         $referenceType = $input->getOption('reference-type');
-        if (!in_array($referenceType, [self::LOCALIZABLE, self::NON_LOCALIZABLE, self::BOTH])) {
-            throw new \InvalidArgumentException(sprintf(
-                'Argument "reference-type" should be "%s", "%s" or "%s".',
-                self::LOCALIZABLE,
-                self::NON_LOCALIZABLE,
-                self::BOTH
-            ));
-        }
+        ArgumentChecker::check($referenceType, 'reference-type', [self::LOCALIZABLE, self::NON_LOCALIZABLE, self::BOTH]);
+
+        $withCategories = $input->getOption('with-categories');
+        ArgumentChecker::check($withCategories, 'with-categories', [self::YES, self::NO]);
 
         $credentials = CredentialReader::read();
         $this->client = $this->clientBuilder->buildAuthenticatedByPassword(
@@ -103,7 +113,13 @@ class CreateFamilyCommand extends Command
         }
 
         $this->createAttribute('description', 'text', false, false, false);
-        $this->createAttribute('categories', 'text', false, false, false);
+
+        if ($withCategories === self::YES) {
+            $this->createAttribute(self::CATEGORIES, 'text', false, false, false);
+        } else {
+            $this->io->writeln(sprintf('Skip creation of attribute "%s"...', self::CATEGORIES));
+        }
+
         $this->createAttribute('tags', 'text', false, false, false);
         $this->createAttribute('end_of_use', 'text', false, false, false);
 
