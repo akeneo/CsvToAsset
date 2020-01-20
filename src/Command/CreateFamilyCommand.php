@@ -70,6 +70,9 @@ class CreateFamilyCommand extends Command
                 ),
                 self::YES
             )
+            ->addOption('category-options', null, InputOption::VALUE_OPTIONAL,
+                sprintf('Create %s field as a "multiple_options" attribute with these options (comma-separated)', self::CATEGORIES),
+            )
         ;
     }
 
@@ -83,6 +86,15 @@ class CreateFamilyCommand extends Command
 
         $withCategories = $input->getOption('with-categories');
         ArgumentChecker::assertOptionIsAllowed($withCategories, 'with-categories', [self::YES, self::NO]);
+
+        $categoryOptions = $input->getOption('category-options');
+        if (!empty($categoryOptions)) {
+            $categoryOptions = array_filter(explode(',', $categoryOptions), function(string $categoryOption) {
+                return !empty($categoryOption);
+            });
+        } else {
+            $categoryOptions = null;
+        }
 
         $credentials = CredentialReader::read();
         $this->client = $this->clientBuilder->buildAuthenticatedByPassword(
@@ -115,7 +127,12 @@ class CreateFamilyCommand extends Command
         $this->createAttribute('description', 'text', false, false, false);
 
         if ($withCategories === self::YES) {
-            $this->createAttribute(self::CATEGORIES, 'text', false, false, false);
+            if ($categoryOptions === null) {
+                $this->createAttribute(self::CATEGORIES, 'text', false, false, false);
+            } else {
+                $this->createAttribute(self::CATEGORIES, 'multiple_options', false, false, false);
+                $this->createCategoryOptions($categoryOptions);
+            }
         } else {
             $this->io->writeln(sprintf('Skip creation of attribute "%s"...', self::CATEGORIES));
         }
@@ -138,7 +155,7 @@ class CreateFamilyCommand extends Command
 
     private function createAttribute(string $attributeCode, string $type, bool $localizable, bool $scopable, bool $required)
     {
-        $this->io->writeln(sprintf('Creation of attribute "%s"...', $attributeCode));
+        $this->io->writeln(sprintf('Creation of %s attribute "%s"...', $type, $attributeCode));
 
         $data = [
             'code' => $attributeCode,
@@ -164,5 +181,15 @@ class CreateFamilyCommand extends Command
     {
         $this->createAttribute(self::ATTRIBUTE_REFERENCE_LOCALIZABLE, 'media_file', true, true, false);
         $this->createAttribute('variation_localizable_scopable', 'media_file', true, true, false);
+    }
+
+    private function createCategoryOptions(array $categoryOptions)
+    {
+        foreach ($categoryOptions as $categoryOption) {
+            $this->io->writeln(sprintf('Creation of attribute option "%s"...', $categoryOption));
+            $this->client->getAssetAttributeOptionApi()->upsert($this->assetFamilyCode, self::CATEGORIES, $categoryOption, [
+                'code' => $categoryOption
+            ]);
+        }
     }
 }
