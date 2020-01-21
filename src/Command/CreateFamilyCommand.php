@@ -8,7 +8,6 @@ use Akeneo\PimEnterprise\ApiClient\AkeneoPimEnterpriseClientBuilder;
 use Akeneo\PimEnterprise\ApiClient\AkeneoPimEnterpriseClientInterface;
 use App\Reader\CredentialReader;
 use Symfony\Component\Console\Command\Command;
-use Symfony\Component\Console\Helper\ProgressBar;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
@@ -23,6 +22,8 @@ class CreateFamilyCommand extends Command
 
     private const ATTRIBUTE_REFERENCE = 'reference';
     private const ATTRIBUTE_REFERENCE_LOCALIZABLE = 'reference_localizable';
+    private const VARIATION_SCOPABLE = 'variation_scopable';
+    private const VARIATION_LOCALIZABLE_SCOPABLE = 'variation_localizable_scopable';
     private const CATEGORIES = 'categories';
     private const TAGS = 'tags';
 
@@ -72,6 +73,13 @@ class CreateFamilyCommand extends Command
                 ),
                 self::YES
             )
+            ->addOption('with-variations', null, InputOption::VALUE_OPTIONAL,
+                sprintf('Create variation field(s) or not. Allowed values: %s|%s',
+                    self::YES,
+                    self::NO
+                ),
+                self::YES
+            )
             ->addOption('category-options', null, InputOption::VALUE_OPTIONAL,
                 sprintf('Create %s field as a "multiple_options" attribute with these options (comma-separated) instead of text attributes', self::CATEGORIES),
             )
@@ -91,6 +99,9 @@ class CreateFamilyCommand extends Command
 
         $withCategories = $input->getOption('with-categories');
         ArgumentChecker::assertOptionIsAllowed($withCategories, 'with-categories', [self::YES, self::NO]);
+
+        $withVariations = $input->getOption('with-variations');
+        ArgumentChecker::assertOptionIsAllowed($withVariations, 'with-variations', [self::YES, self::NO]);
 
         $categoryOptions = $input->getOption('category-options');
         if (!empty($categoryOptions)) {
@@ -126,16 +137,16 @@ class CreateFamilyCommand extends Command
         ]);
 
         if ($referenceType === self::NON_LOCALIZABLE) {
-            $this->createNonLocalizableAttributes();
+            $this->createNonLocalizableAttributes($withVariations);
         };
 
         if ($referenceType === self::LOCALIZABLE) {
-            $this->createLocalizableAttributes();
+            $this->createLocalizableAttributes($withVariations);
         }
 
         if ($referenceType === self::BOTH) {
-            $this->createNonLocalizableAttributes();
-            $this->createLocalizableAttributes();
+            $this->createNonLocalizableAttributes($withVariations);
+            $this->createLocalizableAttributes($withVariations);
         }
 
         $this->createAttribute('description', 'text', false, false, false);
@@ -190,16 +201,24 @@ class CreateFamilyCommand extends Command
         $this->client->getAssetAttributeApi()->upsert($this->assetFamilyCode, $attributeCode, $data);
     }
 
-    private function createNonLocalizableAttributes()
+    private function createNonLocalizableAttributes(string $withVariations): void
     {
         $this->createAttribute(self::ATTRIBUTE_REFERENCE, 'media_file', false, true, false);
-        $this->createAttribute('variation_scopable', 'media_file', false, true, false);
+        if ($withVariations === self::YES) {
+            $this->createAttribute(self::VARIATION_SCOPABLE, 'media_file', false, true, false);
+        } else {
+            $this->io->writeln(sprintf('Skip creation of attribute "%s"...', self::VARIATION_SCOPABLE));
+        }
     }
 
-    private function createLocalizableAttributes()
+    private function createLocalizableAttributes(string $withVariations): void
     {
         $this->createAttribute(self::ATTRIBUTE_REFERENCE_LOCALIZABLE, 'media_file', true, true, false);
-        $this->createAttribute('variation_localizable_scopable', 'media_file', true, true, false);
+        if ($withVariations === self::YES) {
+            $this->createAttribute(self::VARIATION_LOCALIZABLE_SCOPABLE, 'media_file', true, true, false);
+        } else {
+            $this->io->writeln(sprintf('Skip creation of attribute "%s"...', self::VARIATION_LOCALIZABLE_SCOPABLE));
+        }
     }
 
     private function createCategoryOptions(array $categoryOptions)
