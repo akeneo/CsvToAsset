@@ -72,6 +72,9 @@ class MergeAssetsAndVariationsFilesCommand extends Command
     /** @var string */
     private $withCategories;
 
+    /** @var string */
+    private $withVariations;
+
     protected function configure()
     {
         $this
@@ -96,6 +99,13 @@ class MergeAssetsAndVariationsFilesCommand extends Command
                 ),
                 self::YES
             )
+            ->addOption('with-variations', null, InputOption::VALUE_OPTIONAL,
+                sprintf('Add the variations to the merged file or not to import it to the generated assets. Allowed values: %s|%s',
+                    self::YES,
+                    self::NO
+                ),
+                self::YES
+            )
         ;
     }
 
@@ -113,6 +123,9 @@ class MergeAssetsAndVariationsFilesCommand extends Command
 
         $this->withCategories = $input->getOption('with-categories');
         ArgumentChecker::assertOptionIsAllowed($this->withCategories, 'with-categories', [self::YES, self::NO]);
+
+        $this->withVariations = $input->getOption('with-variations');
+        ArgumentChecker::assertOptionIsAllowed($this->withVariations, 'with-variations', [self::YES, self::NO]);
 
         $this->io->title('Merge PAM Assets CSV file with PAM Variation CSV file');
         $this->io->text([
@@ -229,17 +242,20 @@ class MergeAssetsAndVariationsFilesCommand extends Command
             }
         }
 
-        $valuesHeaders = [];
         foreach ($this->channels as $channel) {
             if ($this->referenceType === self::NON_LOCALIZABLE || $this->referenceType === self::BOTH) {
                 $valuesHeaders[] = sprintf('%s-%s', self::REFERENCE_FILE_FIELD, $channel);
-                $valuesHeaders[] = sprintf('%s-%s', self::VARIATION_FILE_FIELD, $channel);
+                if ($this->withVariations === self::YES) {
+                    $valuesHeaders[] = sprintf('%s-%s', self::VARIATION_FILE_FIELD, $channel);
+                }
             }
 
             if ($this->referenceType === self::LOCALIZABLE || $this->referenceType === self::BOTH) {
                 foreach ($this->locales as $locale) {
                     $valuesHeaders[] = sprintf('%s-%s-%s', self::LOCALIZED_REFERENCE_FILE_FIELD, $locale, $channel);
-                    $valuesHeaders[] = sprintf('%s-%s-%s', self::LOCALIZED_VARIATION_FILE_FIELD, $locale, $channel);
+                    if ($this->withVariations === self::YES) {
+                        $valuesHeaders[] = sprintf('%s-%s-%s', self::LOCALIZED_VARIATION_FILE_FIELD, $locale, $channel);
+                    }
                 }
             }
         }
@@ -291,7 +307,9 @@ class MergeAssetsAndVariationsFilesCommand extends Command
             if (!empty($variation['locale'])) {
                 if ($this->referenceType === self::LOCALIZABLE || $this->referenceType === self::BOTH) {
                     $structure[sprintf('%s-%s-%s', self::LOCALIZED_REFERENCE_FILE_FIELD, $variation['locale'], $variation['channel'])] = $variation['reference_file'];
-                    $structure[sprintf('%s-%s-%s', self::LOCALIZED_VARIATION_FILE_FIELD, $variation['locale'], $variation['channel'])] = $variation['variation_file'];
+                    if ($this->withVariations === self::YES) {
+                        $structure[sprintf('%s-%s-%s', self::LOCALIZED_VARIATION_FILE_FIELD, $variation['locale'], $variation['channel'])] = $variation['variation_file'];
+                    }
                 } else {
                     throw new \RuntimeException(sprintf(
                         "The merge script encountered an issue with \"%s\".
@@ -303,7 +321,9 @@ class MergeAssetsAndVariationsFilesCommand extends Command
             } else {
                 if ($this->referenceType === self::NON_LOCALIZABLE || $this->referenceType === self::BOTH) {
                     $structure[sprintf('%s-%s', self::REFERENCE_FILE_FIELD, $variation['channel'])] = $variation['reference_file'];
-                    $structure[sprintf('%s-%s', self::VARIATION_FILE_FIELD, $variation['channel'])] = $variation['variation_file'];
+                    if ($this->withVariations === self::YES) {
+                        $structure[sprintf('%s-%s', self::VARIATION_FILE_FIELD, $variation['channel'])] = $variation['variation_file'];
+                    }
                 } else {
                     throw new \RuntimeException(sprintf(
                         "The merge script encountered an issue with \"%s\".

@@ -97,6 +97,16 @@ Allowed values: %s|%s|%s',
                 ),
                 self::AUTO
             )
+            ->addOption('with-variations', null, InputOption::VALUE_OPTIONAL,
+                sprintf('Add the variations to your new assets
+When set to "%s", your new asset family will have variation field(s), and variations will be imported.
+Allowed values: %s|%s',
+                    self::YES,
+                    self::YES,
+                    self::NO
+                ),
+                self::YES
+            )
             ->addOption('convert-category-to-option', null, InputOption::VALUE_OPTIONAL,
                 sprintf('Import the categories as "multiple_options".
 When set to "%s", your new asset family will have a multiple options "%s" field.
@@ -154,6 +164,9 @@ Allowed values: %s|%s|%s',
         $withCategories = $input->getOption('with-categories');
         ArgumentChecker::assertOptionIsAllowed($withCategories, 'with-categories', [self::YES, self::NO, self::AUTO]);
 
+        $withVariations = $input->getOption('with-variations');
+        ArgumentChecker::assertOptionIsAllowed($withVariations, 'with-variations', [self::YES, self::NO]);
+
         $convertCategoryToOption = $input->getOption('convert-category-to-option');
         ArgumentChecker::assertOptionIsAllowed($convertCategoryToOption, 'convert-category-to-option', [self::YES, self::NO, self::AUTO]);
 
@@ -202,6 +215,7 @@ Allowed values: %s|%s|%s',
             $this->assetFamilyCode,
             sprintf('--reference-type=%s', $referenceType),
             sprintf('--with-categories=%s', $withCategories),
+            sprintf('--with-variations=%s', $withVariations),
         ];
         if ($convertCategoryToOption === self::YES) {
             $arguments[] = sprintf('--category-options=%s', join(',', $categoryCodes));
@@ -216,7 +230,8 @@ Allowed values: %s|%s|%s',
             $variationsCsvFilename,
             $tmpfname,
             sprintf('--reference-type=%s', $referenceType),
-            sprintf('--with-categories=%s', $withCategories)
+            sprintf('--with-categories=%s', $withCategories),
+            sprintf('--with-variations=%s', $withVariations),
         ]);
         $this->executeCommand('app:import', [$tmpfname, $this->assetFamilyCode]);
 
