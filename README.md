@@ -79,8 +79,6 @@ This mode is for a PIM with a simple usage of the former assets.
 It will automatically create your previous assets and import them it into one unique new Asset family.
 As the categories and tags does not exist in the new Asset feature, we will keep them in a specific field on each Asset.
 
-#### Steps
-
 To migrate your data, run
 ```bash
 ./bin/migrate.php <family-code> <path-to-ee-installation>
@@ -93,9 +91,7 @@ with
 
 This mode is when you need to create several Asset families.
 
-#### Steps
-
-##### Export assets
+#### Export assets
 
 You first need to export your assets of your Enterprise Edition. Go to your Enterprise Edition path, then 
 ```bash
@@ -103,14 +99,14 @@ php bin/console pimee:migrate-pam-assets:export-assets <temporary-folder>
 ```
 This command will export 2 files, named `<temporary-folder>/assets.csv` and `<temporary-folder>/variations.csv`, each of them containing the assets and the variations.
 
-##### Choose your families
+#### Choose your families
 
 Open the `assets.csv` file with your favorite spreadsheet editor, to add a new column named `family`.
 This column have to be the family code where you want to put your asset.
 You can put a different value at each line of this file, it will create as much families as different family codes.
 Save your `assets.csv` in the same format than the original one (most important is the separator has to be `;`!).
 
-##### Save your connection
+#### Save your connection
 
 Create your new new connection to be able to use the API. 
 Go to your Enterprise Edition path, then 
@@ -120,14 +116,14 @@ php bin/console akeneo:connectivity-connection:create migrations_pam
 Store these crentials into a `credentials` file containing 4 lines: clientId, secret, username and password.
 Don't forget to remove this file when you finish to import all your assets.
 
-##### Import your assets
+#### Import your assets
 
 Go to CsvToAsset folder and run the migration process:
 ```bash
 php bin/console app:migrate /path/to/assets.csv /path/to/variations.csv
 ```
 
-##### Update the former PIM attributes
+#### Update the former PIM attributes
 
 Finally, we need to update the PIM attributes to match the new Asset type.
 Go to your Enterprise Edition folder, then run
@@ -139,24 +135,22 @@ php bin/console pimee:assets:migrate:migrate-pam-attributes
 
 This mode is when you need to create several Asset families and choose every parameter of your families.
 
-#### Steps
-
-##### Export assets
+#### Export assets
 
 Please refer the "Migration semi-automatic: Export assets" section.
 
-##### Split your assets file
+#### Split your assets file
 
 Once you have your `assets.csv` file containing all your assets, you will have to split it into several files.
 Each file will contain the assets of a unique family.
 Please keep on each file the header of the original `assets.csv`, and keep the same CSV format.
 Once done, you should have several files like `assets_packshot.csv`, `assets_designers.csv`,...
 
-##### Save your connection
+#### Save your connection
 
 Please refer the "Migration semi-automatic: Save your connection" section.
 
-##### Import your assets
+#### Import your assets
 
 Now, you will have to migrate your assets family per family.
 For each file you created, run this command:
@@ -166,7 +160,7 @@ php bin/console app:migrate /path/to/assets_yourfamily.csv /path/to/variations.c
 The migrate command have a lot of parameters for customize your new Asset family.
 Use `php bin/console app:migrate -h` or go the the "Commands" section below.
 
-##### Update the former PIM attributes
+#### Update the former PIM attributes
 
 Please refer the "Migration semi-automatic: Update the former PIM attributes" section.
 
