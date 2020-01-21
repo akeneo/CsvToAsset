@@ -224,10 +224,12 @@ class CreateFamilyCommand extends Command
     private function createCategoryOptions(array $categoryOptions)
     {
         foreach ($categoryOptions as $categoryOption) {
-            $this->io->writeln(sprintf('Creation of attribute option "%s"...', $categoryOption));
-            $this->client->getAssetAttributeOptionApi()->upsert($this->assetFamilyCode, self::CATEGORIES, $categoryOption, [
-                'code' => $categoryOption
-            ]);
+            if (!empty($categoryOption)) {
+                $this->io->writeln(sprintf('Creation of attribute option "%s"...', $categoryOption));
+                $this->client->getAssetAttributeOptionApi()->upsert($this->assetFamilyCode, self::CATEGORIES, $categoryOption, [
+                    'code' => $categoryOption
+                ]);
+            }
         }
     }
 

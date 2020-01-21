@@ -42,14 +42,11 @@ class MigrateCommand extends Command
     private const TAGS = 'tags';
     private const TAG_LIMIT = 100;
 
-    /** @var string */
-    private $assetFamilyCode;
-
     /** @var SymfonyStyle */
     private $io;
 
-    /** @var CsvReader */
-    private $csvReader;
+    /** @var CsvReader[] */
+    private $csvReaders = [];
 
     public function __construct(
         CreateFamilyCommand $createFamilyCommand,
@@ -61,13 +58,15 @@ class MigrateCommand extends Command
     protected function configure()
     {
         $this
-            ->setDescription("Migrate a complete family
+            ->setDescription("Migrate your assets
+    You can specify the argument 'asset-family-code' if you want to create only 1 asset family.
+    If you don't specify this argument, you will need an extra column called 'asset' in your assets CSV file.
     If you only have non localizable assets, it will create and migrate an asset family with a non localizable reference and non localizable variations.
     If you only have localizable assets, it will create and migrate an asset family with localizable reference and localizable variations.
     If you have localizable and non localizable assets, it will create an asset family with both fields.")
-            ->addArgument('asset-family-code', InputArgument::REQUIRED, 'The asset family code to migrate')
             ->addArgument('assets-csv-filename', InputArgument::OPTIONAL, 'The path to the Assets CSV file', self::ASSETS_CSV_FILENAME)
             ->addArgument('variations-csv-filename', InputArgument::OPTIONAL, 'The path to the Variations CSV file', self::VARIATIONS_CSV_FILENAME)
+            ->addOption('asset-family-code', null, InputOption::VALUE_OPTIONAL, 'The asset family code to migrate', null)
             ->addOption('reference-type', null, InputOption::VALUE_OPTIONAL,
                 sprintf(
                     'Enable if reference is localizable or not. 
@@ -153,10 +152,10 @@ Allowed values: %s|%s|%s',
         $this->io = new SymfonyStyle($input, $output);
         $this->io->title('Migration of your assets');
 
-        $this->assetFamilyCode = $input->getArgument('asset-family-code');
-
         $assetCsvFilename = $input->getArgument('assets-csv-filename');
         $variationsCsvFilename = $input->getArgument('variations-csv-filename');
+
+        $assetFamilyCode = $input->getOption('asset-family-code');
 
         $referenceType = $input->getOption('reference-type');
         ArgumentChecker::assertOptionIsAllowed($referenceType, 'reference-type', [self::LOCALIZABLE, self::NON_LOCALIZABLE, self::BOTH, self::AUTO]);
@@ -173,67 +172,28 @@ Allowed values: %s|%s|%s',
         $convertTagToOption = $input->getOption('convert-tag-to-option');
         ArgumentChecker::assertOptionIsAllowed($convertTagToOption, 'convert-tag-to-option', [self::YES, self::NO, self::AUTO]);
 
-        if ($referenceType === self::AUTO) {
-            $referenceType = $this->guessReferenceType($assetCsvFilename);
+        if (!empty($assetFamilyCode)) {
+            $this->migrate(
+                $assetFamilyCode,
+                $assetCsvFilename,
+                $variationsCsvFilename,
+                $referenceType,
+                $withCategories,
+                $withVariations,
+                $convertCategoryToOption,
+                $convertTagToOption
+            );
+        } else {
+            $this->splitAndMigrate(
+                $assetCsvFilename,
+                $variationsCsvFilename,
+                $referenceType,
+                $withCategories,
+                $withVariations,
+                $convertCategoryToOption,
+                $convertTagToOption
+            );
         }
-
-        if ($withCategories === self::AUTO) {
-            $withCategories = $this->guessWithCategories($assetCsvFilename);
-        }
-
-        if ($withCategories === self::YES &&
-            ($convertCategoryToOption === self::AUTO || $convertCategoryToOption === self::YES)
-        ) {
-            $categoryCodes = $this->getCategoryCodes($assetCsvFilename);
-            if ($convertCategoryToOption === self::AUTO) {
-                if (count($categoryCodes) > self::CATEGORY_LIMIT) {
-                    $this->io->writeln(sprintf('More than %s categories were found in the assets file, it will import the categories as text.', self::CATEGORY_LIMIT));
-                    $convertCategoryToOption = self::NO;
-                } else {
-                    $this->io->writeln(sprintf('Less than %s categories were found in the assets file, it will import the categories as multiple options.', self::CATEGORY_LIMIT));
-                    $convertCategoryToOption = self::YES;
-                }
-            }
-        }
-
-        if ($convertTagToOption === self::AUTO || $convertCategoryToOption === self::YES) {
-            $tags = $this->getTags($assetCsvFilename);
-            if ($convertTagToOption === self::AUTO) {
-                if (count($categoryCodes) > self::TAG_LIMIT) {
-                    $this->io->writeln(sprintf('More than %s tags were found in the assets file, it will import the tags as text.', self::TAG_LIMIT));
-                    $convertTagToOption = self::NO;
-                } else {
-                    $this->io->writeln(sprintf('Less than %s tags were found in the assets file, it will import the tags as multiple options.', self::TAG_LIMIT));
-                    $convertTagToOption = self::YES;
-                }
-            }
-        }
-
-        $tmpfname = tempnam('/tmp', 'migration_target_');
-
-        $arguments = [
-            $this->assetFamilyCode,
-            sprintf('--reference-type=%s', $referenceType),
-            sprintf('--with-categories=%s', $withCategories),
-            sprintf('--with-variations=%s', $withVariations),
-        ];
-        if ($convertCategoryToOption === self::YES) {
-            $arguments[] = sprintf('--category-options=%s', join(',', $categoryCodes));
-        }
-        if ($convertTagToOption === self::YES) {
-            $arguments[] = sprintf('--tag-options=%s', join(',', $tags));
-        }
-
-        $this->executeCommand('app:create-family', $arguments);
-        $this->executeCommand('app:merge-files', [
-            $assetCsvFilename,
-            $variationsCsvFilename,
-            $tmpfname,
-            sprintf('--reference-type=%s', $referenceType),
-            sprintf('--with-categories=%s', $withCategories),
-            sprintf('--with-variations=%s', $withVariations),
-        ]);
-        $this->executeCommand('app:import', [$tmpfname, $this->assetFamilyCode]);
 
         $this->io->success('Migration success!');
     }
@@ -359,18 +319,18 @@ Allowed values: %s|%s|%s',
 
     private function getReader(string $assetCsvFilename): CsvReader
     {
-        if ($this->csvReader === null) {
-            $this->csvReader = new CsvReader(
+        if (!isset($this->csvReaders[$assetCsvFilename])) {
+            $this->csvReaders[$assetCsvFilename] = new CsvReader(
                 $assetCsvFilename, [
                     'fieldDelimiter' => self::CSV_FIELD_DELIMITER,
                     'fieldEnclosure' => self::CSV_FIELD_ENCLOSURE,
                     'endOfLineCharacter' => self::CSV_END_OF_LINE_CHARACTER,
             ]);
-        } else {
-            $this->csvReader->rewind();
         }
 
-        return $this->csvReader;
+        $this->csvReaders[$assetCsvFilename]->rewind();
+
+        return $this->csvReaders[$assetCsvFilename];
     }
 
     private function getCategoryCodes(string $assetCsvFilename): array
@@ -437,5 +397,165 @@ Allowed values: %s|%s|%s',
 
             exit(1);
         }
+    }
+
+    private function migrate(
+        string $assetFamilyCode,
+        string $assetCsvFilename,
+        string $variationsCsvFilename,
+        string $referenceType,
+        string $withCategories,
+        string $withVariations,
+        string $convertCategoryToOption,
+        string $convertTagToOption
+    ) {
+        $this->io->title(sprintf('Migration of the family "%s"', $assetFamilyCode));
+
+        if ($referenceType === self::AUTO) {
+            $referenceType = $this->guessReferenceType($assetCsvFilename);
+            $this->io->newLine();
+        }
+
+        if ($withCategories === self::AUTO) {
+            $withCategories = $this->guessWithCategories($assetCsvFilename);
+            $this->io->newLine();
+        }
+
+        if ($withCategories === self::YES &&
+            ($convertCategoryToOption === self::AUTO || $convertCategoryToOption === self::YES)
+        ) {
+            $categoryCodes = $this->getCategoryCodes($assetCsvFilename);
+            if ($convertCategoryToOption === self::AUTO) {
+                if (count($categoryCodes) > self::CATEGORY_LIMIT) {
+                    $this->io->writeln(sprintf('More than %s categories were found in the assets file, it will import the categories as text.', self::CATEGORY_LIMIT));
+                    $convertCategoryToOption = self::NO;
+                } else {
+                    $this->io->writeln(sprintf('Less than %s categories were found in the assets file, it will import the categories as multiple options.', self::CATEGORY_LIMIT));
+                    $convertCategoryToOption = self::YES;
+                }
+                $this->io->newLine();
+            }
+        }
+
+        if ($convertTagToOption === self::AUTO || $convertCategoryToOption === self::YES) {
+            $tags = $this->getTags($assetCsvFilename);
+            if ($convertTagToOption === self::AUTO) {
+                if (count($tags) > self::TAG_LIMIT) {
+                    $this->io->writeln(sprintf('More than %s tags were found in the assets file, it will import the tags as text.', self::TAG_LIMIT));
+                    $convertTagToOption = self::NO;
+                } else {
+                    $this->io->writeln(sprintf('Less than %s tags were found in the assets file, it will import the tags as multiple options.', self::TAG_LIMIT));
+                    $convertTagToOption = self::YES;
+                }
+                $this->io->newLine();
+            }
+        }
+
+        $tmpfname = tempnam('./', 'migration_target_') . '.csv';
+
+        $arguments = [
+            $assetFamilyCode,
+            sprintf('--reference-type=%s', $referenceType),
+            sprintf('--with-categories=%s', $withCategories),
+            sprintf('--with-variations=%s', $withVariations),
+        ];
+        if ($convertCategoryToOption === self::YES) {
+            $arguments[] = sprintf('--category-options=%s', join(',', $categoryCodes));
+        }
+        if ($convertTagToOption === self::YES) {
+            $arguments[] = sprintf('--tag-options=%s', join(',', $tags));
+        }
+
+        $this->executeCommand('app:create-family', $arguments);
+        $this->executeCommand('app:merge-files', [
+            $assetCsvFilename,
+            $variationsCsvFilename,
+            $tmpfname,
+            sprintf('--reference-type=%s', $referenceType),
+            sprintf('--with-categories=%s', $withCategories),
+            sprintf('--with-variations=%s', $withVariations),
+        ]);
+        $this->executeCommand('app:import', [$tmpfname, $assetFamilyCode]);
+
+        $this->io->success(sprintf("Family %s successfully imported", $assetFamilyCode));
+    }
+
+    private function splitAndMigrate(
+        string $assetCsvFilename,
+        string $variationsCsvFilename,
+        string $referenceType,
+        string $withCategories,
+        string $withVariations,
+        string $convertCategoryToOption,
+        string $convertTagToOption
+    ) {
+        $assetFamilyCodes = $this->splitAndFill($assetCsvFilename);
+
+        foreach ($assetFamilyCodes as $assetFamilyCode) {
+            $filename = $this->getFilename($assetCsvFilename, $assetFamilyCode);
+            $this->migrate(
+                $assetFamilyCode,
+                $filename,
+                $variationsCsvFilename,
+                $referenceType,
+                $withCategories,
+                $withVariations,
+                $convertCategoryToOption,
+                $convertTagToOption
+            );
+
+            $this->io->writeln(sprintf('Deletion of the temporary file "%s"...', $filename));
+            unlink($filename);
+        }
+    }
+
+    private function splitAndFill(string $assetCsvFilename): array {
+        $files = [];
+        try {
+            $this->io->writeln(sprintf('You did not specify "asset-family-code" argument. The script will now split your "%s" file into several files to migrate them.', $assetCsvFilename));
+            $assetsReader = $this->getReader($assetCsvFilename);
+
+            $headers = $assetsReader->getHeaders();
+            foreach ($assetsReader as $assetLineNumber => $row) {
+                if ($assetLineNumber === 1) {
+                    continue;
+                }
+
+                if (!$this->isHeaderValid($assetsReader, $row)) {
+                    continue;
+                }
+
+                $assetLine = array_combine($headers, $row);
+                $assetFamilyCode = isset($assetLine['family']) ? $assetLine['family'] : null;
+                if (empty($assetFamilyCode)) {
+                    throw new \RuntimeException(sprintf('The line %d of "%s" does not contain a valid family. You need to fill a column "family" or use the command option "asset-family-code"', $assetLineNumber, $assetCsvFilename));
+                }
+
+                $filename = $this->getFilename($assetCsvFilename, $assetFamilyCode);
+
+                if (!isset($files[$assetFamilyCode])) {
+                    $this->io->writeln(sprintf('Found a new family code, creation of a file "%s"...', $filename));
+                    $files[$assetFamilyCode] = fopen($filename, 'w');
+                    fputcsv($files[$assetFamilyCode], $headers, ';');
+                }
+
+                fputcsv($files[$assetFamilyCode], $row, ';');
+            }
+        } catch (IOException|UnsupportedTypeException|ReaderNotOpenedException $e) {
+            $this->io->error($e->getMessage());
+
+            exit(1);
+        } finally {
+            foreach ($files as $assetFamilyCode => $file) {
+                fclose($file);
+            }
+        }
+
+        return array_keys($files);
+    }
+
+    private function getFilename(string $assetCsvFilename, $assetFamilyCode)
+    {
+        return dirname($assetCsvFilename) . DIRECTORY_SEPARATOR . pathinfo($assetCsvFilename, PATHINFO_EXTENSION) . '_' . $assetFamilyCode . '.csv';
     }
 }

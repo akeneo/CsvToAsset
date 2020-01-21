@@ -190,6 +190,8 @@ class MergeAssetsAndVariationsFilesCommand extends Command
         $this->indexVariationLinesByAssetCode();
 
         $this->io->text('Now merging files and create new Assets...');
+        $this->io->newLine();
+
         $progressBar->start();
 
         $headers = $this->assetsReader->getHeaders();
@@ -332,6 +334,10 @@ class MergeAssetsAndVariationsFilesCommand extends Command
                     ));
                 }
             }
+        }
+
+        if ($this->withCategories === self::NO) {
+            unset($oldAsset[self::CATEGORIES]);
         }
 
         return array_merge($structure, $oldAsset);
