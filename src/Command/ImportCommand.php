@@ -125,13 +125,6 @@ class ImportCommand extends Command
             exit;
         }
 
-        $this->io->title('Custom entity bundle migration tool');
-        $this->io->text([
-            'Welcome to this migration tool made to help migrate your assets from the Custom',
-            'Entity bundle to the new Asset manager feature You are currently using the "interactive mode".',
-            'If you want to automate this process or don\'t want to use default values, add the --no-interaction flag when you call this command.'
-        ]);
-
         $this->io->newLine(2);
         $this->io->title(
             sprintf(
