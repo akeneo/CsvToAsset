@@ -105,7 +105,7 @@ if (null === $credentials) {
 
 
 executeCommand(
-    ['bin/console', 'app:migrate', '--ansi', $assetFamilyCode, '/tmp/assets.csv', '/tmp/variations.csv'],
+    ['bin/console', 'app:migrate', '--ansi', '/tmp/assets.csv', '/tmp/variations.csv', sprintf('--asset-family-code=%s', $assetFamilyCode)],
     null,
     function ($output) { }
 );
