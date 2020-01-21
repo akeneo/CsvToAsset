@@ -73,10 +73,10 @@ class MigrateCommand extends Command
                     'Enable if reference is localizable or not. 
 When set to "%s", it will guess the value from the assets file content.
 Allowed values: %s|%s|%s|%s',
+                    self::AUTO,
                     self::LOCALIZABLE,
                     self::NON_LOCALIZABLE,
                     self::BOTH,
-                    self::AUTO,
                     self::AUTO
                 ),
                 self::AUTO
@@ -141,6 +141,8 @@ Allowed values: %s|%s|%s',
     public function execute(InputInterface $input, OutputInterface $output)
     {
         $this->io = new SymfonyStyle($input, $output);
+        $this->io->title('Migration of your assets');
+
         $this->assetFamilyCode = $input->getArgument('asset-family-code');
 
         $assetCsvFilename = $input->getArgument('assets-csv-filename');
@@ -207,6 +209,7 @@ Allowed values: %s|%s|%s',
         if ($convertTagToOption === self::YES) {
             $arguments[] = sprintf('--tag-options=%s', join(',', $tags));
         }
+
         $this->executeCommand('app:create-family', $arguments);
         $this->executeCommand('app:merge-files', [
             $assetCsvFilename,
@@ -223,20 +226,20 @@ Allowed values: %s|%s|%s',
     private function executeCommand($name, $arguments)
     {
         $process = new Process(
-            array_merge(['bin/console', $name], $arguments),
-			null,
-			null,
-			null,
-			null // Disable timeout
+            array_merge(['bin/console', $name, '--ansi'], $arguments),
+            null,
+            null,
+            null,
+            null
         );
 
-        $process->run();
+        $process->start();
+        foreach ($process as $type => $data) {
+            $this->io->write($data);
+        }
+
         if ($process->getExitCode() > 0) {
-            $this->io->error('An error occurred during migration');
-            if ($process->getErrorOutput() !== '') {
-                $this->io->error($process->getErrorOutput());
-            }
-            $this->io->warning($process->getOutput());
+            $this->io->error(sprintf('An error occurred during %s.', self::$defaultName));
 
             die($process->getExitCode());
         } else {

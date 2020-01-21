@@ -50,25 +50,24 @@ function executeCommand($arguments, $path, $callback)
     $io = new SymfonyStyle(new ArgvInput(), new ConsoleOutput());
 
     $process = new Process($arguments, $path, null, null, null);
-    $process->run();
+    $process->start();
+    $output = '';
+    foreach ($process as $type => $data) {
+        $io->write($data);
+        $output = $output . $data;
+    }
 
     if ($process->getExitCode() > 0) {
-        $io->error('An error occurred during migration');
-        if ($process->getErrorOutput() !== '') {
-            $io->error($process->getErrorOutput());
-        }
-        $io->warning($process->getOutput());
+        $io->error('An error occurred during migration.');
 
         die($process->getExitCode());
     } else {
-        $output = $process->getOutput();
-        $io->write($output);
         $callback($output);
     }
 }
 
 executeCommand(
-    ['bin/console', 'pimee:migrate-pam-assets:export-assets', '/tmp'],
+    ['bin/console', 'pimee:migrate-pam-assets:export-assets', '--ansi', '/tmp'],
     $eePath,
     function ($output) { }
 );
@@ -77,10 +76,11 @@ const CLIENT_LABEL = 'migrations_pam';
 
 $credentials = CredentialReader::read();
 if (null === $credentials) {
+    $io->title(sprintf('Creation of the credentials to connect through the API (label: %s)', CLIENT_LABEL));
     executeCommand(
-        ['bin/console', 'akeneo:connectivity-connection:create', CLIENT_LABEL],
+        ['bin/console', 'akeneo:connectivity-connection:create', '--ansi', CLIENT_LABEL],
         $eePath,
-        function ($output) {
+        function ($output) use ($io) {
             $outputLines = preg_split("/\n/", $output);
             $credentials['clientId'] = preg_split('/: /', $outputLines[2])[1];
             $credentials['secret'] = preg_split('/: /', $outputLines[3])[1];
@@ -93,6 +93,8 @@ if (null === $credentials) {
                 $credentials['username'],
                 $credentials['password']
             );
+
+            $io->success('Credentials created and stored in ./credientials');
         }
     );
 
@@ -103,16 +105,17 @@ if (null === $credentials) {
 
 
 executeCommand(
-    ['bin/console', 'app:migrate', $assetFamilyCode, '/tmp/assets.csv', '/tmp/variations.csv'],
+    ['bin/console', 'app:migrate', '--ansi', $assetFamilyCode, '/tmp/assets.csv', '/tmp/variations.csv'],
     null,
     function ($output) { }
 );
 
 executeCommand(
-    ['bin/console', 'pimee:assets:migrate:migrate-pam-attributes', $assetFamilyCode],
+    ['bin/console', 'pimee:assets:migrate:migrate-pam-attributes', '--ansi', $assetFamilyCode],
     $eePath,
     function ($output) { }
 );
 
-$io->success('Asset were fully migrated!');
 $io->warning(sprintf('Don\'t forget to remove the API credential file located in "%s". It contains sensitive data to connect to your PIM instance.', CredentialReader::FILENAME));
+$io->success('Asset were fully migrated!');
+
