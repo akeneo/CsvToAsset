@@ -452,7 +452,7 @@ Allowed values: %s|%s|%s',
             }
         }
 
-        $tmpfname = tempnam('./', 'migration_target_') . '.csv';
+        $tmpfname = tempnam('/tmp/', 'migration_target_') . '.csv';
 
         $arguments = [
             $assetFamilyCode,
@@ -574,7 +574,7 @@ Allowed values: %s|%s|%s',
         $headers = current($output);
         exec(sprintf('rm -f %s*', $targetFile));
         exec(sprintf('split -l 50000 %s %s', $fileToBeSplit, $targetFile));
-        exec(sprintf('ls %s*', $targetFile), $filesToBeImported);
+        exec(sprintf('ls %s_*', $targetFile), $filesToBeImported);
 
         // Add headers to each file (except the first one)
         $filesToAddHeadersTo = $filesToBeImported;
