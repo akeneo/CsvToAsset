@@ -116,6 +116,8 @@ php bin/console akeneo:connectivity-connection:create migrations_pam
 Store these crentials into a `credentials` file containing 4 lines: clientId, secret, username and password.
 Don't forget to remove this file when you finish to import all your assets.
 
+_Warning:_ ensure the role linked to `migration_pam` connection have the permission to "list channels" to allow the script work.
+
 #### Import your assets
 
 Go to CsvToAsset folder and run the migration process:
