@@ -13,6 +13,9 @@ use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\Console\Question\ChoiceQuestion;
+use Symfony\Component\Console\Question\ConfirmationQuestion;
+use Symfony\Component\Console\Question\Question;
 use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Component\Process\Process;
 
@@ -223,10 +226,10 @@ Allowed values: %s|%s|%s',
         }
     }
 
-    private function guessReferenceType(string $assetCsvFilename): string
+    private function guessReferenceType(string $assetCsvFilename): ?string
     {
         try {
-            $this->io->writeln('The script will now guess if your assets are localizable, non localizable or both...');
+            $this->io->write('To help you in your decision, the command will parse your assets file... ');
             $assetsReader = $this->getReader($assetCsvFilename);
 
             $headers = $assetsReader->getHeaders();
@@ -251,19 +254,19 @@ Allowed values: %s|%s|%s',
             }
 
             if (!$foundLocalized && !$foundNonLocalized) {
-                $this->io->error('No assets found. This script can not guess the reference type.');
+                $this->io->writeln('No assets found.');
 
-                exit(1);
+                return null;
             } else if ($foundNonLocalized && $foundLocalized) {
-                $this->io->writeln(sprintf('Found localized and non localized assets, set reference type to "%s".', self::BOTH));
+                $this->io->writeln('Found localized and non localized assets.');
 
                 return self::BOTH;
             } else if ($foundLocalized) {
-                $this->io->writeln(sprintf('Only found localized assets, set reference type to "%s".', self::LOCALIZABLE));
+                $this->io->writeln('Found only localized assets.');
 
                 return self::LOCALIZABLE;
             } else {
-                $this->io->writeln(sprintf('Only found non localized assets, set reference type to "%s".', self::NON_LOCALIZABLE));
+                $this->io->writeln('Found only non localized assets.');
 
                 return self::NON_LOCALIZABLE;
             }
@@ -277,7 +280,7 @@ Allowed values: %s|%s|%s',
     private function guessWithCategories(string $assetCsvFilename): string
     {
         try {
-            $this->io->writeln('The script will now guess if the categories field need to be imported...');
+            $this->io->writeln('To help you in your decision, the command will parse your assets file...');
             $assetsReader = $this->getReader($assetCsvFilename);
 
             $headers = $assetsReader->getHeaders();
@@ -296,13 +299,13 @@ Allowed values: %s|%s|%s',
                 $categories = array_unique(array_merge($categories, $assetCategories));
 
                 if (count($categories) > 1) {
-                    $this->io->writeln('More than 1 categories was found in the assets file, it will import the categories.');
+                    $this->io->writeln('More than 1 categories were found in the assets file, you should import them.');
 
                     return self::YES;
                 }
             }
 
-            $this->io->writeln(sprintf('%d category was found in the assets file, it will not import the categories.', count($categories)));
+            $this->io->writeln(sprintf('%d category was found in the assets file, you should not import them.', count($categories)));
 
             return self::NO;
         } catch (IOException|UnsupportedTypeException|ReaderNotOpenedException $e) {
@@ -413,12 +416,28 @@ Allowed values: %s|%s|%s',
         $this->io->title(sprintf('Migration of the family "%s"', $assetFamilyCode));
 
         if ($referenceType === self::AUTO) {
-            $referenceType = $this->guessReferenceType($assetCsvFilename);
+            $this->io->writeln('You did not set the <options=bold>--reference-type</> option.');
+            $this->io->writeln(sprintf('If all your assets are localized, choose <options=bold>%s</>', self::LOCALIZABLE));
+            $this->io->writeln(sprintf('If all your assets are not localized, choose <options=bold>%s</>', self::NON_LOCALIZABLE));
+            $this->io->writeln(sprintf('If your assets are localized and non localized, choose <options=bold>%s</>', self::BOTH));
+            $newReferenceType = $this->guessReferenceType($assetCsvFilename);
+            $referenceType = $this->io->askQuestion(new ChoiceQuestion(
+                'Please pick a value for your reference type',
+                [self::LOCALIZABLE, self::NON_LOCALIZABLE, self::BOTH],
+                $newReferenceType
+            ));
             $this->io->newLine();
         }
 
         if ($withCategories === self::AUTO) {
-            $withCategories = $this->guessWithCategories($assetCsvFilename);
+            $this->io->writeln('You did not set the <options=bold>--with-categories</> option.');
+            $this->io->writeln('Choose if you want to import the categories into your new Asset family.');
+            $newWithCategory = $this->guessWithCategories($assetCsvFilename);
+            $answer = $this->io->askQuestion(new ConfirmationQuestion(
+                'Do you want to import the categories into your new Asset family?',
+                $newWithCategory === self::YES
+            ));
+            $withCategories = $answer ? self::YES : self::NO;
             $this->io->newLine();
         }
 

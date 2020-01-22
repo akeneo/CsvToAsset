@@ -12,8 +12,6 @@ use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
-use Symfony\Component\Console\Question\ConfirmationQuestion;
-use Symfony\Component\Console\Question\Question;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
 class CreateFamilyCommand extends Command
@@ -141,11 +139,6 @@ class CreateFamilyCommand extends Command
         $this->io->title(sprintf('Creation of asset family "%s"...', $this->assetFamilyCode));
 
         $this->displayMessage($referenceType, $withVariations, $withCategories, $categoryOptions, $tagOptions, $attributeAsMainMedia);
-        if (!$this->io->askQuestion(new ConfirmationQuestion(sprintf('Do you want to create the family %s?', $this->assetFamilyCode)))) {
-            $this->io->writeln('Exiting...');
-
-            exit(0);
-        }
 
         $this->io->newLine();
 
