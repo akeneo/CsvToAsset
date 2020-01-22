@@ -475,6 +475,13 @@ Allowed values: %s|%s|%s',
             sprintf('--with-categories=%s', $withCategories),
             sprintf('--with-variations=%s', $withVariations),
         ]);
+
+        // Split big file and import one by one to avoid memory leaks
+        $filesToImport = $this->splitFilesToImportBy50K($tmpfname);
+        foreach ($filesToImport as $i => $fileToImport) {
+            $this->io->title(sprintf('Importing asset file %d/%d', $i, \count($filesToImport)));
+            $this->executeCommand('app:import', [$fileToImport, $assetFamilyCode, '-vvv']);
+        }
         $this->executeCommand('app:import', [$tmpfname, $assetFamilyCode]);
 
         $this->io->success(sprintf("Family %s successfully imported", $assetFamilyCode));
@@ -557,5 +564,26 @@ Allowed values: %s|%s|%s',
     private function getFilename(string $assetCsvFilename, $assetFamilyCode)
     {
         return dirname($assetCsvFilename) . DIRECTORY_SEPARATOR . pathinfo($assetCsvFilename, PATHINFO_EXTENSION) . '_' . $assetFamilyCode . '.csv';
+    }
+
+    private function splitFilesToImportBy50K(string $fileToBeSplit): array
+    {
+        $targetFile = sprintf('%s_', $fileToBeSplit);
+        exec(sprintf('head -n 1 %s', $fileToBeSplit), $output);
+        $headers = current($output);
+        exec(sprintf('rm -f %s*', $targetFile));
+        exec(sprintf('split -l 50000 %s %s', $fileToBeSplit, $targetFile));
+        exec(sprintf('ls %s*', $targetFile), $filesToBeImported);
+
+        // Add headers to each file (except the first one)
+        $filesToAddHeadersTo = $filesToBeImported;
+        array_shift($filesToAddHeadersTo);
+        foreach ($filesToAddHeadersTo as $fileToAddHeadersTo) {
+            exec(sprintf('echo "%s" > tmpFile', $headers));
+            exec(sprintf('cat %s >> tmpFile', $fileToAddHeadersTo));
+            exec(sprintf('mv tmpFile %s', $fileToAddHeadersTo));
+        }
+
+        return $filesToBeImported;
     }
 }
