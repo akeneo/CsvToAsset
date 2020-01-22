@@ -352,10 +352,9 @@ Allowed values: %s|%s|%s',
 
                 $assetLine = array_combine($headers, $row);
                 $assetCategories = explode(',', $assetLine['categories']);
-                $categoryCodes = array_merge($categoryCodes, $assetCategories);
+                $categoryCodes = array_unique(array_merge($categoryCodes, $assetCategories));
             }
 
-            $categoryCodes = array_unique($categoryCodes);
             $this->io->writeln(sprintf('%d categories were found in the assets file.', count($categoryCodes)));
 
             return $categoryCodes;
@@ -385,10 +384,12 @@ Allowed values: %s|%s|%s',
 
                 $assetLine = array_combine($headers, $row);
                 $assetTags = explode(',', $assetLine['tags']);
-                $tags = array_merge($tags, $assetTags);
+                $tags = array_unique(array_merge($tags, $assetTags));
+                if (\count($tags) > self::TAG_LIMIT) {
+                    break;
+                }
             }
 
-            $tags = array_unique($tags);
             $this->io->writeln(sprintf('%d tags were found in the assets file.', count($tags)));
 
             return $tags;
