@@ -75,9 +75,9 @@ Please read the different scenarios to find the one which will match your needs.
 
 ### Full-automatic migration
 
-This mode is for a PIM with a simple usage of the former assets.
-It will automatically create your previous assets and import them it into one unique new Asset family.
-As the categories and tags does not exist in the new Asset feature, we will keep them in a specific field on each Asset.
+This mode is for a PIM with a simple usage of the former PAM assets.
+It will automatically create your PAM assets and import them it into one unique new Asset family.
+As the categories and tags do not exist in the new Asset feature, we will keep them in a specific field on each Asset.
 
 To migrate your data, run
 ```bash
@@ -102,13 +102,13 @@ This command will export 2 files, named `<temporary-folder>/assets.csv` and `<te
 #### Choose your families
 
 Open the `assets.csv` file with your favorite spreadsheet editor, to add a new column named `family`.
-This column have to be the family code where you want to put your asset.
-You can put a different value at each line of this file, it will create as much families as different family codes.
+This column has to be the family code where you want to put your assets in.
+You can put a different value at each line of this file, it will create as much families as there are family codes.
 Save your `assets.csv` in the same format than the original one (most important is the separator has to be `;`!).
 
 #### Save your connection
 
-Create your new new connection to be able to use the API. 
+Create your new connection to be able to use the API. 
 Go to your Enterprise Edition path, then 
 ```bash
 php bin/console akeneo:connectivity-connection:create migrations_pam
