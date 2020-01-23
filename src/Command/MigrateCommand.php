@@ -15,7 +15,6 @@ use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Question\ChoiceQuestion;
 use Symfony\Component\Console\Question\ConfirmationQuestion;
-use Symfony\Component\Console\Question\Question;
 use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Component\Process\Process;
 
@@ -67,6 +66,7 @@ class MigrateCommand extends Command
     If you only have non localizable assets, it will create and migrate an asset family with a non localizable reference and non localizable variations.
     If you only have localizable assets, it will create and migrate an asset family with localizable reference and localizable variations.
     If you have localizable and non localizable assets, it will create an asset family with both fields.")
+            ->addArgument('ee-path', InputArgument::REQUIRED, 'The path to your EE installation')
             ->addArgument('assets-csv-filename', InputArgument::OPTIONAL, 'The path to the Assets CSV file', self::ASSETS_CSV_FILENAME)
             ->addArgument('variations-csv-filename', InputArgument::OPTIONAL, 'The path to the Variations CSV file', self::VARIATIONS_CSV_FILENAME)
             ->addOption('asset-family-code', null, InputOption::VALUE_OPTIONAL, 'The asset family code to migrate', null)
@@ -175,6 +175,8 @@ Allowed values: %s|%s|%s',
         $convertTagToOption = $input->getOption('convert-tag-to-option');
         ArgumentChecker::assertOptionIsAllowed($convertTagToOption, 'convert-tag-to-option', [self::YES, self::NO, self::AUTO, null]);
 
+        $this->eePath = $input->getArgument('ee-path');
+
         if (!empty($assetFamilyCode)) {
             $this->migrate(
                 $assetFamilyCode,
@@ -201,11 +203,11 @@ Allowed values: %s|%s|%s',
         $this->io->success('Migration success!');
     }
 
-    private function executeCommand($name, $arguments)
+    private function executeCommand(string $name, array $arguments, ?string $path = null)
     {
         $process = new Process(
             array_merge(['bin/console', $name, '--ansi'], $arguments),
-            null,
+            $path,
             null,
             null,
             null
@@ -533,6 +535,8 @@ Allowed values: %s|%s|%s',
             $this->io->title(sprintf('Importing asset file %d/%d', $i+1, \count($filesToImport)));
             $this->executeCommand('app:import', [$fileToImport, $assetFamilyCode, '-vvv']);
         }
+
+        $this->executeCommand('pimee:assets:migrate:migrate-asset-category-labels', [$assetFamilyCode], $this->eePath);
 
         $this->io->success(sprintf("Family %s successfully imported", $assetFamilyCode));
     }
