@@ -121,7 +121,14 @@ class CreateFamilyCommand extends Command
             $tagOptions = null;
         }
 
+        $attributeAsMainMedia = $referenceType === self::NON_LOCALIZABLE || $referenceType === self::BOTH ?
+            self::ATTRIBUTE_REFERENCE :
+            self::ATTRIBUTE_REFERENCE_LOCALIZABLE;
+
         $credentials = CredentialReader::read();
+        if (null === $credentials) {
+            throw new \RuntimeException('No credentials found. See the README.md to create your credentials file.');
+        }
         $this->client = $this->clientBuilder->buildAuthenticatedByPassword(
             $credentials['clientId'],
             $credentials['secret'],
@@ -130,6 +137,10 @@ class CreateFamilyCommand extends Command
         );
 
         $this->io->title(sprintf('Creation of asset family "%s"...', $this->assetFamilyCode));
+
+        $this->displayMessage($referenceType, $withVariations, $withCategories, $categoryOptions, $tagOptions, $attributeAsMainMedia);
+
+        $this->io->newLine();
 
         $this->client->getAssetFamilyApi()->upsert($this->assetFamilyCode, [
             'code' => $this->assetFamilyCode,
@@ -170,9 +181,6 @@ class CreateFamilyCommand extends Command
         }
         $this->createAttribute('end_of_use', 'text', false, false, false);
 
-        $attributeAsMainMedia = $referenceType === self::NON_LOCALIZABLE || $referenceType === self::BOTH ?
-            self::ATTRIBUTE_REFERENCE :
-            self::ATTRIBUTE_REFERENCE_LOCALIZABLE;
         $this->io->writeln(sprintf('Update "%s" attribute as main media...', $attributeAsMainMedia));
 
         $this->client->getAssetFamilyApi()->upsert($this->assetFamilyCode, [
@@ -241,5 +249,62 @@ class CreateFamilyCommand extends Command
                 'code' => $tagOption
             ]);
         }
+    }
+
+    private function displayMessage(
+        string $referenceType,
+        string $withVariations,
+        string $withCategories,
+        ?array $categoryOptions,
+        ?array $tagOptions,
+        string $attributeAsMainMedia
+    ) {
+        $messages = [sprintf('This command will create an asset family "%s" with:', $this->assetFamilyCode)];
+        if ($referenceType === self::NON_LOCALIZABLE) {
+            $messages[] = sprintf('- An attribute <options=bold>%s</> of type <options=bold>%s</>', self::ATTRIBUTE_REFERENCE, 'media_file');
+            if ($withVariations === self::YES) {
+                $messages[] = sprintf('- An attribute <options=bold>%s</> of type <options=bold>%s</>', self::VARIATION_SCOPABLE, 'media_file');
+            }
+        }
+        if ($referenceType === self::LOCALIZABLE) {
+            $messages[] = sprintf('- An attribute <options=bold>%s</> of type <options=bold>%s</>', self::ATTRIBUTE_REFERENCE_LOCALIZABLE, 'media_file');
+            if ($withVariations === self::YES) {
+                $messages[] = sprintf('- An attribute <options=bold>%s</> of type <options=bold>%s</>', self::VARIATION_LOCALIZABLE_SCOPABLE, 'media_file');
+            }
+        }
+        if ($referenceType === self::BOTH) {
+            $messages[] = sprintf('- An attribute <options=bold>%s</> of type <options=bold>%s</>', self::ATTRIBUTE_REFERENCE, 'media_file');
+            if ($withVariations === self::YES) {
+                $messages[] = sprintf('- An attribute <options=bold>%s</> of type <options=bold>%s</>', self::VARIATION_SCOPABLE, 'media_file');
+            }
+            $messages[] = sprintf('- An attribute <options=bold>%s</> of type <options=bold>%s</>', self::ATTRIBUTE_REFERENCE_LOCALIZABLE, 'media_file');
+            if ($withVariations === self::YES) {
+                $messages[] = sprintf('- An attribute <options=bold>%s</> of type <options=bold>%s</>', self::VARIATION_LOCALIZABLE_SCOPABLE, 'media_file');
+            }
+        }
+        $messages[] = sprintf('- An attribute <options=bold>%s</> of type <options=bold>%s</>', 'description', 'text');
+        if ($withCategories === self::YES) {
+            if ($categoryOptions === null) {
+                $messages[] = sprintf('- An attribute <options=bold>%s</> of type <options=bold>%s</>', self::CATEGORIES, 'text');
+            } else {
+                $messages[] = sprintf('- An attribute <options=bold>%s</> of type <options=bold>%s</> with these values:', self::CATEGORIES, 'multiple_options');
+                foreach ($categoryOptions as $categoryOption) {
+                    $messages[] = sprintf('  - %s', $categoryOption);
+                }
+            }
+        }
+        if ($tagOptions === null) {
+            $messages[] = sprintf('- An attribute <options=bold>%s</> of type <options=bold>%s</>', self::TAGS, 'text');
+        } else {
+            $messages[] = sprintf('- An attribute <options=bold>%s</> of type <options=bold>%s</> with these values:', self::TAGS, 'multiple_options');
+            foreach ($tagOptions as $tagOption) {
+                $messages[] = sprintf('  - %s', $tagOption);
+            }
+        }
+        $messages[] = sprintf('- An attribute <options=bold>%s</> of type <options=bold>%s</>', 'end_of_use', 'text');
+        $messages[] = '';
+        $messages[] = sprintf('The attribute as main media will be <options=bold>%s</>.', $attributeAsMainMedia);
+
+        $this->io->writeln($messages);
     }
 }
