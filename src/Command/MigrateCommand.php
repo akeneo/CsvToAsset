@@ -292,7 +292,7 @@ Allowed values: %s|%s|%s',
                 }
 
                 $assetLine = array_combine($headers, $row);
-                $assetCategories = explode(',', $assetLine['categories']);
+                $assetCategories = explode(',', isset($assetLine['categories']) ? $assetLine['categories'] : '');
                 $categories = array_unique(array_merge($categories, $assetCategories));
 
                 if (count($categories) > 1) {
@@ -352,10 +352,9 @@ Allowed values: %s|%s|%s',
 
                 $assetLine = array_combine($headers, $row);
                 $assetCategories = explode(',', $assetLine['categories']);
-                $categoryCodes = array_merge($categoryCodes, $assetCategories);
+                $categoryCodes = array_unique(array_merge($categoryCodes, $assetCategories));
             }
 
-            $categoryCodes = array_unique($categoryCodes);
             $this->io->writeln(sprintf('%d categories were found in the assets file.', count($categoryCodes)));
 
             return $categoryCodes;
@@ -385,10 +384,12 @@ Allowed values: %s|%s|%s',
 
                 $assetLine = array_combine($headers, $row);
                 $assetTags = explode(',', $assetLine['tags']);
-                $tags = array_merge($tags, $assetTags);
+                $tags = array_unique(array_merge($tags, $assetTags));
+                if (\count($tags) > self::TAG_LIMIT) {
+                    break;
+                }
             }
 
-            $tags = array_unique($tags);
             $this->io->writeln(sprintf('%d tags were found in the assets file.', count($tags)));
 
             return $tags;
@@ -451,7 +452,7 @@ Allowed values: %s|%s|%s',
             }
         }
 
-        $tmpfname = tempnam('./', 'migration_target_') . '.csv';
+        $tmpfname = tempnam('/tmp/', 'migration_target_') . '.csv';
 
         $arguments = [
             $assetFamilyCode,
@@ -475,7 +476,13 @@ Allowed values: %s|%s|%s',
             sprintf('--with-categories=%s', $withCategories),
             sprintf('--with-variations=%s', $withVariations),
         ]);
-        $this->executeCommand('app:import', [$tmpfname, $assetFamilyCode]);
+
+        // Split big file and import one by one to avoid memory leaks
+        $filesToImport = $this->splitFilesToImportBy50K($tmpfname);
+        foreach ($filesToImport as $i => $fileToImport) {
+            $this->io->title(sprintf('Importing asset file %d/%d', $i+1, \count($filesToImport)));
+            $this->executeCommand('app:import', [$fileToImport, $assetFamilyCode, '-vvv']);
+        }
 
         $this->io->success(sprintf("Family %s successfully imported", $assetFamilyCode));
     }
@@ -557,5 +564,26 @@ Allowed values: %s|%s|%s',
     private function getFilename(string $assetCsvFilename, $assetFamilyCode)
     {
         return dirname($assetCsvFilename) . DIRECTORY_SEPARATOR . pathinfo($assetCsvFilename, PATHINFO_EXTENSION) . '_' . $assetFamilyCode . '.csv';
+    }
+
+    private function splitFilesToImportBy50K(string $fileToBeSplit): array
+    {
+        $targetFile = sprintf('%s_', $fileToBeSplit);
+        exec(sprintf('head -n 1 %s', $fileToBeSplit), $output);
+        $headers = current($output);
+        exec(sprintf('rm -f %s*', $targetFile));
+        exec(sprintf('split -l 50000 %s %s', $fileToBeSplit, $targetFile));
+        exec(sprintf('ls %s*', $targetFile), $filesToBeImported);
+
+        // Add headers to each file (except the first one)
+        $filesToAddHeadersTo = $filesToBeImported;
+        array_shift($filesToAddHeadersTo);
+        foreach ($filesToAddHeadersTo as $fileToAddHeadersTo) {
+            exec(sprintf('echo "%s" > tmpFile', $headers));
+            exec(sprintf('cat %s >> tmpFile', $fileToAddHeadersTo));
+            exec(sprintf('mv tmpFile %s', $fileToAddHeadersTo));
+        }
+
+        return $filesToBeImported;
     }
 }

@@ -171,6 +171,7 @@ class MergeAssetsAndVariationsFilesCommand extends Command
         $this->io->text('');
         $this->retrieveChannelsAndLocales();
         $this->mergeFiles($output, $targetFilePath);
+        $this->io->newLine();
         $this->io->success(sprintf('%s assets created in "%s"', $this->assetsReader->count(), $targetFilePath));
         $this->io->text('You can now import it directly into your PIM by running the "app:import" command');
     }
