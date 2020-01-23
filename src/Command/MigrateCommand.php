@@ -292,7 +292,7 @@ Allowed values: %s|%s|%s',
                 }
 
                 $assetLine = array_combine($headers, $row);
-                $assetCategories = explode(',', $assetLine['categories']);
+                $assetCategories = explode(',', isset($assetLine['categories']) ? $assetLine['categories'] : '');
                 $categories = array_unique(array_merge($categories, $assetCategories));
 
                 if (count($categories) > 1) {
@@ -480,10 +480,9 @@ Allowed values: %s|%s|%s',
         // Split big file and import one by one to avoid memory leaks
         $filesToImport = $this->splitFilesToImportBy50K($tmpfname);
         foreach ($filesToImport as $i => $fileToImport) {
-            $this->io->title(sprintf('Importing asset file %d/%d', $i, \count($filesToImport)));
+            $this->io->title(sprintf('Importing asset file %d/%d', $i+1, \count($filesToImport)));
             $this->executeCommand('app:import', [$fileToImport, $assetFamilyCode, '-vvv']);
         }
-        $this->executeCommand('app:import', [$tmpfname, $assetFamilyCode]);
 
         $this->io->success(sprintf("Family %s successfully imported", $assetFamilyCode));
     }
@@ -574,7 +573,7 @@ Allowed values: %s|%s|%s',
         $headers = current($output);
         exec(sprintf('rm -f %s*', $targetFile));
         exec(sprintf('split -l 50000 %s %s', $fileToBeSplit, $targetFile));
-        exec(sprintf('ls %s_*', $targetFile), $filesToBeImported);
+        exec(sprintf('ls %s*', $targetFile), $filesToBeImported);
 
         // Add headers to each file (except the first one)
         $filesToAddHeadersTo = $filesToBeImported;
