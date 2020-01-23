@@ -81,7 +81,7 @@ Allowed values: %s|%s|%s|%s',
                     self::BOTH,
                     self::AUTO
                 ),
-                self::AUTO
+                null
             )
             ->addOption('with-categories', null, InputOption::VALUE_OPTIONAL,
                 sprintf('Import the categories from your assets file.
@@ -97,7 +97,7 @@ Allowed values: %s|%s|%s',
                     self::NO,
                     self::AUTO
                 ),
-                self::AUTO
+                null
             )
             ->addOption('with-variations', null, InputOption::VALUE_OPTIONAL,
                 sprintf('Add the variations to your new assets
@@ -126,7 +126,7 @@ Allowed values: %s|%s|%s',
                     self::NO,
                     self::AUTO
                 ),
-                self::AUTO
+                null
             )
             ->addOption('convert-tag-to-option', null, InputOption::VALUE_OPTIONAL,
                 sprintf('Import the tags as "multiple_options".
@@ -145,7 +145,7 @@ Allowed values: %s|%s|%s',
                     self::NO,
                     self::AUTO
                 ),
-                self::AUTO
+                null
             )
         ;
     }
@@ -161,19 +161,19 @@ Allowed values: %s|%s|%s',
         $assetFamilyCode = $input->getOption('asset-family-code');
 
         $referenceType = $input->getOption('reference-type');
-        ArgumentChecker::assertOptionIsAllowed($referenceType, 'reference-type', [self::LOCALIZABLE, self::NON_LOCALIZABLE, self::BOTH, self::AUTO]);
+        ArgumentChecker::assertOptionIsAllowed($referenceType, 'reference-type', [self::LOCALIZABLE, self::NON_LOCALIZABLE, self::BOTH, self::AUTO, null]);
 
         $withCategories = $input->getOption('with-categories');
-        ArgumentChecker::assertOptionIsAllowed($withCategories, 'with-categories', [self::YES, self::NO, self::AUTO]);
+        ArgumentChecker::assertOptionIsAllowed($withCategories, 'with-categories', [self::YES, self::NO, self::AUTO, null]);
 
         $withVariations = $input->getOption('with-variations');
         ArgumentChecker::assertOptionIsAllowed($withVariations, 'with-variations', [self::YES, self::NO]);
 
         $convertCategoryToOption = $input->getOption('convert-category-to-option');
-        ArgumentChecker::assertOptionIsAllowed($convertCategoryToOption, 'convert-category-to-option', [self::YES, self::NO, self::AUTO]);
+        ArgumentChecker::assertOptionIsAllowed($convertCategoryToOption, 'convert-category-to-option', [self::YES, self::NO, self::AUTO, null]);
 
         $convertTagToOption = $input->getOption('convert-tag-to-option');
-        ArgumentChecker::assertOptionIsAllowed($convertTagToOption, 'convert-tag-to-option', [self::YES, self::NO, self::AUTO]);
+        ArgumentChecker::assertOptionIsAllowed($convertTagToOption, 'convert-tag-to-option', [self::YES, self::NO, self::AUTO, null]);
 
         if (!empty($assetFamilyCode)) {
             $this->migrate(
@@ -229,7 +229,7 @@ Allowed values: %s|%s|%s',
     private function guessReferenceType(string $assetCsvFilename): ?string
     {
         try {
-            $this->io->write('To help you in your decision, the command will parse your assets file... ');
+            $this->io->write('The command will parse your assets file... ');
             $assetsReader = $this->getReader($assetCsvFilename);
 
             $headers = $assetsReader->getHeaders();
@@ -280,7 +280,7 @@ Allowed values: %s|%s|%s',
     private function guessWithCategories(string $assetCsvFilename): string
     {
         try {
-            $this->io->writeln('To help you in your decision, the command will parse your assets file...');
+            $this->io->writeln('The command will parse your assets file...');
             $assetsReader = $this->getReader($assetCsvFilename);
 
             $headers = $assetsReader->getHeaders();
@@ -299,7 +299,7 @@ Allowed values: %s|%s|%s',
                 $categories = array_unique(array_merge($categories, $assetCategories));
 
                 if (count($categories) > 1) {
-                    $this->io->writeln('More than 1 categories were found in the assets file, you should import them.');
+                    $this->io->writeln('More than 1 category were found in the assets file, you should import them.');
 
                     return self::YES;
                 }
@@ -407,79 +407,97 @@ Allowed values: %s|%s|%s',
         string $assetFamilyCode,
         string $assetCsvFilename,
         string $variationsCsvFilename,
-        string $referenceType,
-        string $withCategories,
-        string $withVariations,
-        string $convertCategoryToOption,
-        string $convertTagToOption
+        ?string $referenceType,
+        ?string $withCategories,
+        ?string $withVariations,
+        ?string $convertCategoryToOption,
+        ?string $convertTagToOption
     ) {
         $this->io->title(sprintf('Migration of the family "%s"', $assetFamilyCode));
 
-        if ($referenceType === self::AUTO) {
-            $this->io->writeln('You did not set the <options=bold>--reference-type</> option.');
-            $this->io->writeln(sprintf('If all your assets are localized, choose <options=bold>%s</>', self::LOCALIZABLE));
-            $this->io->writeln(sprintf('If all your assets are not localized, choose <options=bold>%s</>', self::NON_LOCALIZABLE));
-            $this->io->writeln(sprintf('If you have both localizable and non localizable assets in this family, <options=bold>%s</>', self::BOTH));
-            $newReferenceType = $this->guessReferenceType($assetCsvFilename);
-            $referenceType = $this->io->askQuestion(new ChoiceQuestion(
-                'Please pick a value for your reference type',
-                [self::LOCALIZABLE, self::NON_LOCALIZABLE, self::BOTH],
-                $newReferenceType
-            ));
+        if (in_array($referenceType, [self::AUTO, null])) {
+            if ($referenceType === null) {
+                $this->io->writeln('You did not set the <options=bold>--reference-type</> option.');
+                $this->io->writeln(sprintf('If all your assets are localized, choose <options=bold>%s</>', self::LOCALIZABLE));
+                $this->io->writeln(sprintf('If all your assets are not localized, choose <options=bold>%s</>', self::NON_LOCALIZABLE));
+                $this->io->writeln(sprintf('If you have both localizable and non localizable assets in this family, <options=bold>%s</>', self::BOTH));
+                $newReferenceType = $this->guessReferenceType($assetCsvFilename);
+                $referenceType = $this->io->askQuestion(new ChoiceQuestion(
+                    'Please pick a value for your reference type',
+                    [self::LOCALIZABLE, self::NON_LOCALIZABLE, self::BOTH],
+                    $newReferenceType
+                ));
+            } else if ($referenceType === self::AUTO) {
+                $referenceType = $this->guessReferenceType($assetCsvFilename);
+            }
+            $this->io->writeln(sprintf('The command will be ran with <options=bold>--reference-type=%s</>', $referenceType));
             $this->io->newLine();
         }
 
-        if ($withCategories === self::AUTO) {
-            $this->io->writeln('You did not set the <options=bold>--with-categories</> option.');
-            $this->io->writeln('Choose if you want to import the categories into your new Asset family.');
-            $newWithCategory = $this->guessWithCategories($assetCsvFilename);
-            $withCategories = $this->io->askQuestion(new ConfirmationQuestion(
-                'Do you want to import the categories into your new Asset family?',
-                $newWithCategory === self::YES
-            )) ? self::YES : self::NO;
-            $this->io->newLine();
-        }
-
-        if ($withCategories === self::YES &&
-            ($convertCategoryToOption === self::AUTO || $convertCategoryToOption === self::YES)
-        ) {
-            $categoryCodes = $this->getCategoryCodes($assetCsvFilename);
-            if ($convertCategoryToOption === self::AUTO) {
-                $this->io->writeln('You did not set the <options=bold>--convert-category-to-option</> option.');
-                $this->io->writeln('Choose this option if you want to convert your categories to an option field instead of a text field.');
-
-                if (count($categoryCodes) > self::CATEGORY_LIMIT) {
-                    $this->io->writeln(sprintf('More than %s categories were found in the assets file, you should not convert the categories.', self::CATEGORY_LIMIT));
-                    $defaultAnswer = false;
-                } else {
-                    $this->io->writeln(sprintf('Less than %s categories were found in the assets file, you should convert the categories in a multiple option field.', self::CATEGORY_LIMIT));
-                    $defaultAnswer = true;
-                }
-                $convertCategoryToOption = $this->io->askQuestion(new ConfirmationQuestion(
-                    'Do you want to convert the categories in a multiple option field instead of a text field?',
-                    $defaultAnswer
+        if (in_array($withCategories, [self::AUTO, null])) {
+            if ($withCategories === null) {
+                $this->io->writeln('You did not set the <options=bold>--with-categories</> option.');
+                $this->io->writeln('Choose if you want to import the categories into your new Asset family.');
+                $newWithCategory = $this->guessWithCategories($assetCsvFilename);
+                $withCategories = $this->io->askQuestion(new ConfirmationQuestion(
+                    'Do you want to import the categories into your new Asset family?',
+                    $newWithCategory === self::YES
                 )) ? self::YES : self::NO;
+            } else if ($withCategories === self::AUTO) {
+                $withCategories = $this->guessWithCategories($assetCsvFilename);
+            }
+            $this->io->writeln(sprintf('The command will be ran with <options=bold>--with-categories=%s</>', $withCategories));
+            $this->io->newLine();
+        }
+
+        if ($withCategories === self::YES && in_array($convertCategoryToOption, [self::AUTO, self::YES, null])) {
+            $categoryCodes = $this->getCategoryCodes($assetCsvFilename);
+            if (in_array($convertTagToOption, [self::AUTO, null])) {
+                if ($convertCategoryToOption === null) {
+                    $this->io->writeln('You did not set the <options=bold>--convert-category-to-option</> option.');
+                    $this->io->writeln('Choose this option if you want to convert your categories to an option field instead of a text field.');
+
+                    if (count($categoryCodes) > self::CATEGORY_LIMIT) {
+                        $this->io->writeln(sprintf('More than %s categories were found in the assets file, you should not convert the categories.', self::CATEGORY_LIMIT));
+                        $defaultAnswer = false;
+                    } else {
+                        $this->io->writeln(sprintf('Less than %s categories were found in the assets file, you should convert the categories in a multiple option field.', self::CATEGORY_LIMIT));
+                        $defaultAnswer = true;
+                    }
+                    $convertCategoryToOption = $this->io->askQuestion(new ConfirmationQuestion(
+                        'Do you want to convert the categories in a multiple option field instead of a text field?',
+                        $defaultAnswer
+                    )) ? self::YES : self::NO;
+                } else if ($convertCategoryToOption === self::AUTO) {
+                    $convertCategoryToOption = count($categoryCodes) > self::CATEGORY_LIMIT ? self::NO : self::YES;
+                }
+                $this->io->writeln(sprintf('The command will be ran with <options=bold>--convert-category-to-option=%s</>', $convertCategoryToOption));
                 $this->io->newLine();
             }
         }
 
-        if ($convertTagToOption === self::AUTO || $convertCategoryToOption === self::YES) {
+        if (in_array($convertTagToOption, [self::AUTO, self::YES, null])) {
             $tags = $this->getTags($assetCsvFilename);
-            if ($convertTagToOption === self::AUTO) {
-                $this->io->writeln('You did not set the <options=bold>--convert-tag-to-option</> option.');
-                $this->io->writeln('Choose this option if you want to convert your tags to an option field instead of a text field.');
+            if (in_array($convertTagToOption, [self::AUTO, null])) {
+                if ($convertTagToOption === null) {
+                    $this->io->writeln('You did not set the <options=bold>--convert-tag-to-option</> option.');
+                    $this->io->writeln('Choose this option if you want to convert your tags to an option field instead of a text field.');
 
-                if (count($tags) > self::TAG_LIMIT) {
-                    $this->io->writeln(sprintf('More than %s tags were found in the assets file, you should not convert the tags.', self::TAG_LIMIT));
-                    $defaultAnswer = false;
-                } else {
-                    $this->io->writeln(sprintf('Less than %s tags were found in the assets file, you should convert the tags in a multiple option field.', self::TAG_LIMIT));
-                    $defaultAnswer = true;
+                    if (count($tags) > self::TAG_LIMIT) {
+                        $this->io->writeln(sprintf('More than %s tags were found in the assets file, you should not convert the tags.', self::TAG_LIMIT));
+                        $defaultAnswer = false;
+                    } else {
+                        $this->io->writeln(sprintf('Less than %s tags were found in the assets file, you should convert the tags in a multiple option field.', self::TAG_LIMIT));
+                        $defaultAnswer = true;
+                    }
+                    $convertTagToOption = $this->io->askQuestion(new ConfirmationQuestion(
+                        'Do you want to convert the tags in a multiple option field instead of a text field?',
+                        $defaultAnswer
+                    )) ? self::YES : self::NO;
+                } else if ($convertTagToOption === self::AUTO) {
+                    $convertTagToOption = count($tags) > self::TAG_LIMIT ? self::NO : self::YES;
                 }
-                $convertTagToOption = $this->io->askQuestion(new ConfirmationQuestion(
-                    'Do you want to convert the tags in a multiple option field instead of a text field?',
-                    $defaultAnswer
-                )) ? self::YES : self::NO;
+                $this->io->writeln(sprintf('The command will be ran with <options=bold>--convert-tag-to-option=%s</>', $convertTagToOption));
                 $this->io->newLine();
             }
         }
@@ -522,11 +540,11 @@ Allowed values: %s|%s|%s',
     private function splitAndMigrate(
         string $assetCsvFilename,
         string $variationsCsvFilename,
-        string $referenceType,
-        string $withCategories,
-        string $withVariations,
-        string $convertCategoryToOption,
-        string $convertTagToOption
+        ?string $referenceType,
+        ?string $withCategories,
+        ?string $withVariations,
+        ?string $convertCategoryToOption,
+        ?string $convertTagToOption
     ) {
         $assetFamilyCodes = $this->splitAndFill($assetCsvFilename);
 

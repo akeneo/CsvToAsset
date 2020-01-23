@@ -9,11 +9,11 @@ class ArgumentChecker
     /**
      * This function checks if a value is allowed, and throws an exception if not.
      *
-     * @param string $value
+     * @param string|null $value
      * @param string $argumentName
-     * @param array $allowedValues
+     * @param string[] $allowedValues
      */
-    public static function assertOptionIsAllowed(string $value, string $argumentName, array $allowedValues)
+    public static function assertOptionIsAllowed(?string $value, string $argumentName, array $allowedValues)
     {
         if (!in_array($value, $allowedValues)) {
             $firstFields = join(', ', array_map(function (string $allowedValue) {
