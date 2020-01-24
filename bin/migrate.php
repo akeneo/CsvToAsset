@@ -28,7 +28,7 @@ $io = new SymfonyStyle(new ArgvInput(), new ConsoleOutput());
 
 $inputDefinition = new InputDefinition([
     new InputArgument('asset-family-code', InputArgument::REQUIRED),
-    new InputArgument('ee-path', InputArgument::REQUIRED)
+    new InputArgument('pim-path', InputArgument::REQUIRED)
 ]);
 
 try {
@@ -41,7 +41,7 @@ try {
 }
 
 $assetFamilyCode = $input->getArgument('asset-family-code');
-$eePath = $input->getArgument('ee-path');
+$pimPath = $input->getArgument('pim-path');
 
 require dirname(__DIR__).'/config/bootstrap.php';
 
@@ -68,7 +68,7 @@ function executeCommand($arguments, $path, $callback)
 
 executeCommand(
     ['bin/console', 'pimee:migrate-pam-assets:export-assets', '--ansi', '/tmp'],
-    $eePath,
+    $pimPath,
     function ($output) { }
 );
 
@@ -79,7 +79,7 @@ if (null === $credentials) {
     $io->title(sprintf('Creation of the credentials to connect through the API (label: %s)', CLIENT_LABEL));
     executeCommand(
         ['bin/console', 'akeneo:connectivity-connection:create', '--ansi', CLIENT_LABEL],
-        $eePath,
+        $pimPath,
         function ($output) use ($io) {
             $outputLines = preg_split("/\n/", $output);
             $credentials['clientId'] = preg_split('/: /', $outputLines[2])[1];
@@ -105,14 +105,14 @@ if (null === $credentials) {
 
 
 executeCommand(
-    ['bin/console', 'app:migrate', '--ansi', '/tmp/assets.csv', '/tmp/variations.csv', sprintf('--asset-family-code=%s', $assetFamilyCode)],
+    ['bin/console', 'app:migrate', '--ansi', $pimPath, '/tmp/assets.csv', '/tmp/variations.csv', sprintf('--asset-family-code=%s', $assetFamilyCode)],
     null,
     function ($output) { }
 );
 
 executeCommand(
     ['bin/console', 'pimee:assets:migrate:migrate-pam-attributes', '--ansi', $assetFamilyCode],
-    $eePath,
+    $pimPath,
     function ($output) { }
 );
 
