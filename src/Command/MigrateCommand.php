@@ -50,6 +50,9 @@ class MigrateCommand extends Command
     /** @var CsvReader[] */
     private $csvReaders = [];
 
+    /** @var string */
+    private $pimPath;
+
     public function __construct(
         CreateFamilyCommand $createFamilyCommand,
         MergeAssetsAndVariationsFilesCommand $mergeAssetsAndVariationsFilesCommand
@@ -66,7 +69,7 @@ class MigrateCommand extends Command
     If you only have non localizable assets, it will create and migrate an asset family with a non localizable reference and non localizable variations.
     If you only have localizable assets, it will create and migrate an asset family with localizable reference and localizable variations.
     If you have localizable and non localizable assets, it will create an asset family with both fields.")
-            ->addArgument('ee-path', InputArgument::REQUIRED, 'The path to your EE installation')
+            ->addArgument('pim-path', InputArgument::REQUIRED, 'The path to your PIM Enterprise Edition installation')
             ->addArgument('assets-csv-filename', InputArgument::OPTIONAL, 'The path to the Assets CSV file', self::ASSETS_CSV_FILENAME)
             ->addArgument('variations-csv-filename', InputArgument::OPTIONAL, 'The path to the Variations CSV file', self::VARIATIONS_CSV_FILENAME)
             ->addOption('asset-family-code', null, InputOption::VALUE_OPTIONAL, 'The asset family code to migrate', null)
@@ -175,7 +178,7 @@ Allowed values: %s|%s|%s',
         $convertTagToOption = $input->getOption('convert-tag-to-option');
         ArgumentChecker::assertOptionIsAllowed($convertTagToOption, 'convert-tag-to-option', [self::YES, self::NO, self::AUTO, null]);
 
-        $this->eePath = $input->getArgument('ee-path');
+        $this->pimPath = $input->getArgument('pim-path');
 
         if (!empty($assetFamilyCode)) {
             $this->migrate(
@@ -536,7 +539,10 @@ Allowed values: %s|%s|%s',
             $this->executeCommand('app:import', [$fileToImport, $assetFamilyCode, '-vvv']);
         }
 
-        $this->executeCommand('pimee:assets:migrate:migrate-asset-category-labels', [$assetFamilyCode], $this->eePath);
+        $this->executeCommand('pimee:assets:migrate:migrate-asset-category-labels', [
+            $assetFamilyCode,
+            sprintf('--categories-attribute-code=%s', self::CATEGORIES)
+        ], $this->pimPath);
 
         $this->io->success(sprintf("Family %s successfully imported", $assetFamilyCode));
     }
