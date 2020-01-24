@@ -39,6 +39,8 @@ class MigrateCommand extends Command
     private const CSV_FIELD_ENCLOSURE = '"';
     private const CSV_END_OF_LINE_CHARACTER = "\n";
 
+    private const END_OF_USE = 'end_of_use';
+
     private const CATEGORIES = 'categories';
     private const CATEGORY_LIMIT = 100;
 
@@ -85,7 +87,7 @@ Allowed values: %s|%s|%s|%s',
             )
             ->addOption('with-categories', null, InputOption::VALUE_OPTIONAL,
                 sprintf('Import the categories from your assets file.
-When set to "%s", your new asset family will have a "%s" field, and every asset will contains its former categories.
+When set to "%s", your new asset family will have a "%s" field, and every asset will contain its former categories.
 When set to "%s", it will guess the value from the assets file content.
 It will only create the "%s" field if more than 1 category is found in the assets file.
 Allowed values: %s|%s|%s',
@@ -108,6 +110,20 @@ Allowed values: %s|%s',
                     self::NO
                 ),
                 self::YES
+            )
+            ->addOption('with-end-of-use', null, InputOption::VALUE_OPTIONAL,
+                sprintf('Import the "end of use" data from your assets file.
+When set to "%s", your new asset family will have a "%s" field, and every asset will contain its former data.
+When set to "%s", it will guess the value from the assets file content.
+Allowed values: %s|%s|%s',
+                    self::YES,
+                   self::END_OF_USE,
+                    self::AUTO,
+                    self::YES,
+                    self::NO,
+                    self::AUTO
+                ),
+                null
             )
             ->addOption('convert-category-to-option', null, InputOption::VALUE_OPTIONAL,
                 sprintf('Import the categories as "multiple_options".
@@ -169,6 +185,9 @@ Allowed values: %s|%s|%s',
         $withVariations = $input->getOption('with-variations');
         ArgumentChecker::assertOptionIsAllowed($withVariations, 'with-variations', [self::YES, self::NO]);
 
+        $withEndOfUse = $input->getOption('with-end-of-use');
+        ArgumentChecker::assertOptionIsAllowed($withEndOfUse, 'with-end-of-use', [self::YES, self::NO, self::AUTO, null]);
+
         $convertCategoryToOption = $input->getOption('convert-category-to-option');
         ArgumentChecker::assertOptionIsAllowed($convertCategoryToOption, 'convert-category-to-option', [self::YES, self::NO, self::AUTO, null]);
 
@@ -183,6 +202,7 @@ Allowed values: %s|%s|%s',
                 $referenceType,
                 $withCategories,
                 $withVariations,
+                $withEndOfUse,
                 $convertCategoryToOption,
                 $convertTagToOption
             );
@@ -193,6 +213,7 @@ Allowed values: %s|%s|%s',
                 $referenceType,
                 $withCategories,
                 $withVariations,
+                $withEndOfUse,
                 $convertCategoryToOption,
                 $convertTagToOption
             );
@@ -270,6 +291,41 @@ Allowed values: %s|%s|%s',
 
                 return self::NON_LOCALIZABLE;
             }
+        } catch (IOException|UnsupportedTypeException|ReaderNotOpenedException $e) {
+            $this->io->error($e->getMessage());
+
+            exit(1);
+        }
+    }
+
+    private function guessWithEndOfUse(string $assetCsvFilename): string
+    {
+        try {
+            $this->io->write('The command will parse your assets file... ');
+            $assetsReader = $this->getReader($assetCsvFilename);
+
+            $headers = $assetsReader->getHeaders();
+            foreach ($assetsReader as $assetLineNumber => $row) {
+                if ($assetLineNumber === 1) {
+                    continue;
+                }
+
+                if (!$this->isHeaderValid($assetsReader, $row)) {
+                    continue;
+                }
+
+                $assetLine = array_combine($headers, $row);
+                $endOfUse = $assetLine[self::END_OF_USE];
+                if (!empty(trim($endOfUse))) {
+                    $this->io->writeln(sprintf('At least 1 line with %s was found.', self::END_OF_USE));
+
+                    return self::YES;
+                }
+            }
+
+            $this->io->writeln(sprintf('No line with %s was found.', self::END_OF_USE));
+
+            return self::NO;
         } catch (IOException|UnsupportedTypeException|ReaderNotOpenedException $e) {
             $this->io->error($e->getMessage());
 
@@ -410,6 +466,7 @@ Allowed values: %s|%s|%s',
         ?string $referenceType,
         ?string $withCategories,
         ?string $withVariations,
+        ?string $withEndOfUse,
         ?string $convertCategoryToOption,
         ?string $convertTagToOption
     ) {
@@ -502,6 +559,22 @@ Allowed values: %s|%s|%s',
             }
         }
 
+        if (in_array($withEndOfUse, [self::AUTO, null])) {
+            if ($withEndOfUse === null) {
+                $this->io->writeln('You did not set the <options=bold>--with-end-of-use</> option.');
+                $this->io->writeln('Choose if you want to import the end of use data into your new Asset family.');
+                $newWithEndOfUse = $this->guessWithEndOfUse($assetCsvFilename);
+                $withEndOfUse = $this->io->askQuestion(new ConfirmationQuestion(
+                    'Do you want to import the end of use data into your new Asset family?',
+                    $newWithEndOfUse === self::YES
+                )) ? self::YES : self::NO;
+            } else if ($withEndOfUse === self::AUTO) {
+                $withEndOfUse = $this->guessWithEndOfUse($assetCsvFilename);
+            }
+            $this->io->writeln(sprintf('The command will be ran with <options=bold>--with-end-of-use=%s</>', $withEndOfUse));
+            $this->io->newLine();
+        }
+
         $tmpfname = tempnam('/tmp/', 'migration_target_') . '.csv';
 
         $arguments = [
@@ -509,6 +582,7 @@ Allowed values: %s|%s|%s',
             sprintf('--reference-type=%s', $referenceType),
             sprintf('--with-categories=%s', $withCategories),
             sprintf('--with-variations=%s', $withVariations),
+            sprintf('--with-end-of-use=%s', $withEndOfUse),
         ];
         if ($convertCategoryToOption === self::YES) {
             $arguments[] = sprintf('--category-options=%s', join(',', $categoryCodes));
@@ -525,6 +599,7 @@ Allowed values: %s|%s|%s',
             sprintf('--reference-type=%s', $referenceType),
             sprintf('--with-categories=%s', $withCategories),
             sprintf('--with-variations=%s', $withVariations),
+            sprintf('--with-end-of-use=%s', $withEndOfUse),
         ]);
 
         // Split big file and import one by one to avoid memory leaks
@@ -543,6 +618,7 @@ Allowed values: %s|%s|%s',
         ?string $referenceType,
         ?string $withCategories,
         ?string $withVariations,
+        ?string $withEndOfUse,
         ?string $convertCategoryToOption,
         ?string $convertTagToOption
     ) {
@@ -557,6 +633,7 @@ Allowed values: %s|%s|%s',
                 $referenceType,
                 $withCategories,
                 $withVariations,
+                $withEndOfUse,
                 $convertCategoryToOption,
                 $convertTagToOption
             );

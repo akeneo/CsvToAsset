@@ -80,6 +80,13 @@ class CreateFamilyCommand extends Command
                 ),
                 self::YES
             )
+            ->addOption('with-end-of-use', null, InputOption::VALUE_OPTIONAL,
+                sprintf('Create end_of_use field or not. Allowed values: %s|%s',
+                    self::YES,
+                    self::NO
+                ),
+            self::YES
+            )
             ->addOption('category-options', null, InputOption::VALUE_OPTIONAL,
                 sprintf('Create %s field as a "multiple_options" attribute with these options (comma-separated) instead of text attributes', self::CATEGORIES),
             )
@@ -102,6 +109,9 @@ class CreateFamilyCommand extends Command
 
         $withVariations = $input->getOption('with-variations');
         ArgumentChecker::assertOptionIsAllowed($withVariations, 'with-variations', [self::YES, self::NO]);
+
+        $withEndOfUse = $input->getOption('with-end-of-use');
+        ArgumentChecker::assertOptionIsAllowed($withEndOfUse, 'with-end-of-use', [self::YES, self::NO]);
 
         $categoryOptions = $input->getOption('category-options');
         if (!empty($categoryOptions)) {
@@ -138,7 +148,7 @@ class CreateFamilyCommand extends Command
 
         $this->io->title(sprintf('Creation of asset family "%s"...', $this->assetFamilyCode));
 
-        $this->displayMessage($referenceType, $withVariations, $withCategories, $categoryOptions, $tagOptions, $attributeAsMainMedia);
+        $this->displayMessage($referenceType, $withVariations, $withCategories, $withEndOfUse, $categoryOptions, $tagOptions, $attributeAsMainMedia);
 
         $this->io->newLine();
 
@@ -179,7 +189,12 @@ class CreateFamilyCommand extends Command
             $this->createAttribute(self::TAGS, 'multiple_options', false, false, false);
             $this->createTagOptions($tagOptions);
         }
-        $this->createAttribute('end_of_use', 'text', false, false, false);
+
+        if ($withEndOfUse === self::YES) {
+            $this->createAttribute('end_of_use', 'text', false, false, false);
+        } else {
+            $this->io->writeln('Skip creation of attribute "end_of_use"...');
+        }
 
         $this->io->writeln(sprintf('Update "%s" attribute as main media...', $attributeAsMainMedia));
 
@@ -255,6 +270,7 @@ class CreateFamilyCommand extends Command
         string $referenceType,
         string $withVariations,
         string $withCategories,
+        string $withEndOfUse,
         ?array $categoryOptions,
         ?array $tagOptions,
         string $attributeAsMainMedia
@@ -301,7 +317,9 @@ class CreateFamilyCommand extends Command
                 $messages[] = sprintf('  - %s', $tagOption);
             }
         }
-        $messages[] = sprintf('- An attribute <options=bold>%s</> of type <options=bold>%s</>', 'end_of_use', 'text');
+        if ($withEndOfUse === self::YES) {
+            $messages[] = sprintf('- An attribute <options=bold>%s</> of type <options=bold>%s</>', 'end_of_use', 'text');
+        }
         $messages[] = '';
         $messages[] = sprintf('The attribute as main media will be <options=bold>%s</>.', $attributeAsMainMedia);
 
