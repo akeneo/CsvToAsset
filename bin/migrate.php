@@ -116,6 +116,6 @@ executeCommand(
     function ($output) { }
 );
 
-$io->warning(sprintf('Don\'t forget to remove the API credential file located in "%s". It contains sensitive data to connect to your PIM instance.', CredentialReader::FILENAME));
+$io->warning(sprintf('Don\'t forget to remove the API credential file located in the file "%s". It contains sensitive data to connect to your PIM instance.', CredentialReader::FILENAME));
 $io->success('Asset were fully migrated!');
 

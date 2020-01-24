@@ -142,7 +142,7 @@ class ImportCommand extends Command
         $validValueKeys = $this->filterValidValueKeys($attributes, $channels);
 
         $this->io->title(
-            sprintf('Start importing file "%s" for Asset manager "%s"', $filePath, $assetFamilyCode)
+            sprintf('Start importing file "%s" to asset family "%s"', $filePath, $assetFamilyCode)
         );
         $this->io->text('Everything will be logged here:');
         $this->io->text($this->logger->getLogFilePath());
