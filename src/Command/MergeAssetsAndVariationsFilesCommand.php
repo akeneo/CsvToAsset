@@ -41,6 +41,8 @@ class MergeAssetsAndVariationsFilesCommand extends Command
     private const NON_LOCALIZABLE = 'non-localizable';
     private const BOTH = 'both';
 
+    private const END_OF_USE = 'end_of_use';
+
     private const CATEGORIES = 'categories';
     private const YES = 'yes';
     private const NO = 'no';
@@ -75,6 +77,9 @@ class MergeAssetsAndVariationsFilesCommand extends Command
     /** @var string */
     private $withVariations;
 
+    /** @var string */
+    private $withEndOfUse;
+
     protected function configure()
     {
         $this
@@ -106,6 +111,13 @@ class MergeAssetsAndVariationsFilesCommand extends Command
                 ),
                 self::YES
             )
+            ->addOption('with-end-of-use', null, InputOption::VALUE_OPTIONAL,
+                sprintf('Import the end_of_use data or not. Allowed values: %s|%s',
+                    self::YES,
+                    self::NO
+                ),
+                self::YES
+            )
         ;
     }
 
@@ -126,6 +138,9 @@ class MergeAssetsAndVariationsFilesCommand extends Command
 
         $this->withVariations = $input->getOption('with-variations');
         ArgumentChecker::assertOptionIsAllowed($this->withVariations, 'with-variations', [self::YES, self::NO]);
+
+        $this->withEndOfUse = $input->getOption('with-end-of-use');
+        ArgumentChecker::assertOptionIsAllowed($this->withEndOfUse, 'with-end-of-use', [self::YES, self::NO]);
 
         $this->io->title('Merge PAM Assets CSV file with PAM Variation CSV file');
         $this->io->text([
@@ -245,6 +260,14 @@ class MergeAssetsAndVariationsFilesCommand extends Command
             }
         }
 
+        if ($this->withEndOfUse === self::NO) {
+            // Removes the "end_of_use" field from headers
+            $index = array_search(self::END_OF_USE, $assetHeaders);
+            if ($index !== FALSE){
+                unset($assetHeaders[$index]);
+            }
+        }
+
         foreach ($this->channels as $channel) {
             if ($this->referenceType === self::NON_LOCALIZABLE || $this->referenceType === self::BOTH) {
                 $valuesHeaders[] = sprintf('%s-%s', self::REFERENCE_FILE_FIELD, $channel);
@@ -339,6 +362,9 @@ class MergeAssetsAndVariationsFilesCommand extends Command
 
         if ($this->withCategories === self::NO) {
             unset($oldAsset[self::CATEGORIES]);
+        }
+        if ($this->withEndOfUse === self::NO) {
+            unset($oldAsset[self::END_OF_USE]);
         }
 
         return array_merge($structure, $oldAsset);
