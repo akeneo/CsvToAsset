@@ -34,7 +34,7 @@ cp .env .env.local
 ```
 
 Then open `.env.local` to define the needed configuration vars:
-- `AKENEO_API_BASE` refers to the URL of your PIM Enterprise Edition, used for API calls.
+- `AKENEO_API_BASE_URI` refers to the URL of your PIM Enterprise Edition, used for API calls.
    For example, `http://localhost:80`.
    If you use Docker, set this value to `http://httpd:80` (or `https://httpd:443` if you use SSL).
 - `APP_ENV` refers to the `APP_ENV` of your PIM Enterprise Edition, used for direct bask calls.
@@ -57,9 +57,9 @@ docker network list
 ```
 Find your Enterprise Edition network in this list, stop your Docker, then removes it, to recreate the new one.
 ```bash
-docker-container stop
+docker-compose stop
 docker network create pim
-docker-container up -d
+docker-compose up -d
 ```
 
 Then, you have to use the `docker-compose.override.yml` of this repository. 
