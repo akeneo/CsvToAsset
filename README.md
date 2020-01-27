@@ -1,6 +1,6 @@
 # CsvToAsset
 
-This tool migrates legacy PAM assets (_before 4.0_) to new Asset Manager assets (_available since 3.2_).
+This tool migrates legacy PAM assets (_before 4.0_) to new Asset Manager assets.
 Before using this tool, please read the [migration guide](https://help.akeneo.com/pim/serenity/articles/pam-migration-guide.html).
 
 ## Installation
