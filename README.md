@@ -55,7 +55,7 @@ List the current networks with
 ```bash
 docker network list
 ```
-Find your Enterprise Edition network in this list, stop your Docker, then removes it, to recreate the new one.
+Find your Enterprise Edition network in this list, stop your Docker so it removes it, to be able to create the new one.
 ```bash
 docker-compose stop
 docker network create pim
@@ -72,26 +72,26 @@ docker-compose up
 
 ## How to Use
 
-Please read the different scenarios to find the one which will match your needs.
-You can refer to the [migration guide](https://help.akeneo.com/pim/serenity/articles/pam-migration-guide.html) to have full description of each scenario.
+Please read the different migration scenarios to find the one which will match your needs.
+You can refer to the [migration guide](https://help.akeneo.com/pim/serenity/articles/pam-migration-guide.html) to have a full description of each scenario.
 
 ### Full-automatic migration
 
 This mode is for a PIM with a simple usage of the former PAM assets.
-It will automatically create your PAM assets and import them it into one unique new Asset family.
+It will automatically create your PAM assets and import them into a unique Asset family.
 As the categories and tags do not exist in the new Asset feature, we will keep them in a specific field on each Asset.
 
 Please read the [full documentation](https://help.akeneo.com/pim/serenity/articles/full-automatic-pam-migration.html).
 
 ### Family-by-family migration
 
-This mode is when you need to create several Asset families.
+In this mode, you will create several Asset families.
 
 Please read the [full documentation](https://help.akeneo.com/pim/serenity/articles/family-by-family-pam-migration.html).
 
 ### Full manual migration
 
-This mode is when you need to create several Asset families and choose every parameter of your families.
+This mode is for users who need to create several Asset families and choose every parameter of your families.
 
 Please read the [full documentation](https://help.akeneo.com/pim/serenity/articles/full-manual-pam-migration.html).
 
@@ -100,7 +100,7 @@ Please read the [full documentation](https://help.akeneo.com/pim/serenity/articl
 ### `app:migrate [options] <pim-path> <assets-csv-filename> <variations-csv-filename>`
 > This command migrates a single assets CSV file to one or several Asset families.
 
-You can run `app:migrate -h` to have full details about this command arguments.
+You can run `app:migrate -h` to have full details about this command's arguments.
 
 Options:
 - `--asset-family-code=ASSET-FAMILY-CODE`
@@ -112,7 +112,7 @@ Options:
 - `--convert-tag-to-option=yes|no|auto`
 
 ### `app:create-family [options] <asset-family-code>`
-> This command creates (using the API) an Asset Family with attributes needed to support legacy PAM structure
+> This command creates (using the API) an Asset Family with attributes needed to support the legacy PAM structure
 - `reference` (_media_file attribute_)
 - `reference_localizable` (_media_file attribute_)
 - `variation_scopable` (_media_file attribute_)
@@ -122,7 +122,7 @@ Options:
 - `tags` (_text attribute_)
 - `end_of_use` (_text attribute_)
 
-You can run `app:create-family -h` to have full details about this command arguments.
+You can run `app:create-family -h` to have full details about this command's arguments.
 
 Options:
 - `--reference-type=localizable|non-localizable|both`
