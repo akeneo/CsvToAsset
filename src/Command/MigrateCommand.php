@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Command;
 
+use App\FieldNameProvider;
 use App\Reader\CsvReader;
 use Box\Spout\Common\Exception\IOException;
 use Box\Spout\Common\Exception\UnsupportedTypeException;
@@ -38,12 +39,7 @@ class MigrateCommand extends Command
     private const CSV_FIELD_ENCLOSURE = '"';
     private const CSV_END_OF_LINE_CHARACTER = "\n";
 
-    private const END_OF_USE = 'end_of_use';
-
-    private const CATEGORIES = 'categories';
     private const CATEGORY_LIMIT = 100;
-
-    private const TAGS = 'tags';
     private const TAG_LIMIT = 100;
 
     /** @var SymfonyStyle */
@@ -54,6 +50,9 @@ class MigrateCommand extends Command
 
     /** @var string */
     private $pimPath;
+
+    /** @var FieldNameProvider */
+    private $fieldNameProvider;
 
     public function __construct(
         CreateFamilyCommand $createFamilyCommand,
@@ -90,14 +89,12 @@ Allowed values: %s|%s|%s|%s',
             )
             ->addOption('with-categories', null, InputOption::VALUE_OPTIONAL,
                 sprintf('Import the categories from your assets file.
-When set to "%s", your new asset family will have a "%s" field, and every asset will contain its former categories.
+When set to "%s", your new asset family will have a categories field, and every asset will contain its former categories.
 When set to "%s", it will guess the value from the assets file content.
-It will only create the "%s" field if more than 1 category is found in the assets file.
+It will only create the categories field if more than 1 category is found in the assets file.
 Allowed values: %s|%s|%s',
                     self::YES,
-                    self::CATEGORIES,
                     self::AUTO,
-                    self::CATEGORIES,
                     self::YES,
                     self::NO,
                     self::AUTO
@@ -116,11 +113,10 @@ Allowed values: %s|%s',
             )
             ->addOption('with-end-of-use', null, InputOption::VALUE_OPTIONAL,
                 sprintf('Import the "end of use" data from your assets file.
-When set to "%s", your new asset family will have a "%s" field, and every asset will contain its former data.
+When set to "%s", your new asset family will have a end of use field, and every asset will contain its former data.
 When set to "%s", it will guess the value from the assets file content.
 Allowed values: %s|%s|%s',
                     self::YES,
-                   self::END_OF_USE,
                     self::AUTO,
                     self::YES,
                     self::NO,
@@ -130,15 +126,13 @@ Allowed values: %s|%s|%s',
             )
             ->addOption('convert-category-to-option', null, InputOption::VALUE_OPTIONAL,
                 sprintf('Import the categories as "multiple_options".
-When set to "%s", your new asset family will have a multiple options "%s" field.
-When set to "%s", your new asset family will have a text "%s" field.
+When set to "%s", your new asset family will have a multiple options categories field.
+When set to "%s", your new asset family will have a text categories field.
 When set to "%s", it will guess the attribute type to set from the assets file content.
 It will use a multiple option field if you have less than %d different categories in your assets file.
 Allowed values: %s|%s|%s',
                     self::YES,
-                    self::CATEGORIES,
                     self::NO,
-                    self::CATEGORIES,
                     self::AUTO,
                     self::CATEGORY_LIMIT,
                     self::YES,
@@ -149,15 +143,13 @@ Allowed values: %s|%s|%s',
             )
             ->addOption('convert-tag-to-option', null, InputOption::VALUE_OPTIONAL,
                 sprintf('Import the tags as "multiple_options".
-When set to "%s", your new asset family will have a multiple options "%s" field.
-When set to "%s", your new asset family will have a text "%s" field.
+When set to "%s", your new asset family will have a multiple options tags field.
+When set to "%s", your new asset family will have a text tags field.
 When set to "%s", it will guess the attribute type to set from the assets file content.
 It will use a multiple option field if you have less than %d different tags in your assets file.
 Allowed values: %s|%s|%s',
                     self::YES,
-                    self::TAGS,
                     self::NO,
-                    self::TAGS,
                     self::AUTO,
                     self::TAG_LIMIT,
                     self::YES,
@@ -166,6 +158,7 @@ Allowed values: %s|%s|%s',
                 ),
                 null
             )
+            ->addOption('mapping', null, InputOption::VALUE_OPTIONAL, 'Use this file for your fields mapping', null)
         ;
     }
 
@@ -197,6 +190,8 @@ Allowed values: %s|%s|%s',
         $convertTagToOption = $input->getOption('convert-tag-to-option');
         ArgumentChecker::assertOptionIsAllowed($convertTagToOption, 'convert-tag-to-option', [self::YES, self::NO, self::AUTO, null]);
 
+        $this->fieldNameProvider = new FieldNameProvider($input->getOption('mapping'));
+
         $this->pimPath = $input->getArgument('pim-path');
 
         if (!empty($assetFamilyCode)) {
@@ -209,7 +204,8 @@ Allowed values: %s|%s|%s',
                 $withVariations,
                 $withEndOfUse,
                 $convertCategoryToOption,
-                $convertTagToOption
+                $convertTagToOption,
+                $input->getOption('mapping')
             );
         } else {
             $this->splitAndMigrate(
@@ -220,7 +216,8 @@ Allowed values: %s|%s|%s',
                 $withVariations,
                 $withEndOfUse,
                 $convertCategoryToOption,
-                $convertTagToOption
+                $convertTagToOption,
+                $input->getOption('mapping')
             );
         }
 
@@ -320,15 +317,15 @@ Allowed values: %s|%s|%s',
                 }
 
                 $assetLine = array_combine($headers, $row);
-                $endOfUse = $assetLine[self::END_OF_USE];
+                $endOfUse = $assetLine[FieldNameProvider::END_OF_USE];
                 if (!empty(trim($endOfUse))) {
-                    $this->io->writeln(sprintf('At least 1 line with %s was found.', self::END_OF_USE));
+                    $this->io->writeln(sprintf('At least 1 line with %s was found.', FieldNameProvider::END_OF_USE));
 
                     return self::YES;
                 }
             }
 
-            $this->io->writeln(sprintf('No line with %s was found.', self::END_OF_USE));
+            $this->io->writeln(sprintf('No line with %s was found.', FieldNameProvider::END_OF_USE));
 
             return self::NO;
         } catch (IOException|UnsupportedTypeException|ReaderNotOpenedException $e) {
@@ -356,7 +353,10 @@ Allowed values: %s|%s|%s',
                 }
 
                 $assetLine = array_combine($headers, $row);
-                $assetCategories = explode(',', isset($assetLine['categories']) ? $assetLine['categories'] : '');
+                $assetCategories = explode(
+                    ',',
+                    isset($assetLine[FieldNameProvider::CATEGORIES]) ? $assetLine[FieldNameProvider::CATEGORIES] : ''
+                );
                 $categories = array_unique(array_merge($categories, $assetCategories));
 
                 if (count($categories) > 1) {
@@ -415,7 +415,7 @@ Allowed values: %s|%s|%s',
                 }
 
                 $assetLine = array_combine($headers, $row);
-                $assetCategories = explode(',', $assetLine['categories']);
+                $assetCategories = explode(',', $assetLine[FieldNameProvider::CATEGORIES]);
                 $categoryCodes = array_unique(array_merge($categoryCodes, $assetCategories));
             }
 
@@ -447,7 +447,7 @@ Allowed values: %s|%s|%s',
                 }
 
                 $assetLine = array_combine($headers, $row);
-                $assetTags = explode(',', $assetLine['tags']);
+                $assetTags = explode(',', $assetLine[FieldNameProvider::TAGS]);
                 $tags = array_unique(array_merge($tags, $assetTags));
                 if (\count($tags) > self::TAG_LIMIT) {
                     break;
@@ -473,7 +473,8 @@ Allowed values: %s|%s|%s',
         ?string $withVariations,
         ?string $withEndOfUse,
         ?string $convertCategoryToOption,
-        ?string $convertTagToOption
+        ?string $convertTagToOption,
+        ?string $mapping
     ) {
         $this->io->title(sprintf('Migration of the family "%s"', $assetFamilyCode));
 
@@ -582,7 +583,7 @@ Allowed values: %s|%s|%s',
 
         $tmpfname = tempnam('/tmp/', 'migration_target_') . '.csv';
 
-        $arguments = [
+        $createFamilyArguments = [
             $assetFamilyCode,
             sprintf('--reference-type=%s', $referenceType),
             sprintf('--with-categories=%s', $withCategories),
@@ -590,14 +591,17 @@ Allowed values: %s|%s|%s',
             sprintf('--with-end-of-use=%s', $withEndOfUse),
         ];
         if ($convertCategoryToOption === self::YES) {
-            $arguments[] = sprintf('--category-options=%s', join(',', $categoryCodes));
+            $createFamilyArguments[] = sprintf('--category-options=%s', join(',', $categoryCodes));
         }
         if ($convertTagToOption === self::YES) {
-            $arguments[] = sprintf('--tag-options=%s', join(',', $tags));
+            $createFamilyArguments[] = sprintf('--tag-options=%s', join(',', $tags));
         }
+        if (null !== $mapping) {
+            $createFamilyArguments[] = sprintf('--mapping=%s', $mapping);
+        }
+        $this->executeCommand('app:create-family', $createFamilyArguments);
 
-        $this->executeCommand('app:create-family', $arguments);
-        $this->executeCommand('app:merge-files', [
+        $mergeFileArguments = [
             $assetCsvFilename,
             $variationsCsvFilename,
             $tmpfname,
@@ -605,7 +609,11 @@ Allowed values: %s|%s|%s',
             sprintf('--with-categories=%s', $withCategories),
             sprintf('--with-variations=%s', $withVariations),
             sprintf('--with-end-of-use=%s', $withEndOfUse),
-        ]);
+        ];
+        if (null !== $mapping) {
+            $mergeFileArguments[] = sprintf('--mapping=%s', $mapping);
+        }
+        $this->executeCommand('app:merge-files', $mergeFileArguments);
 
         // Split big file and import one by one to avoid memory leaks
         $filesToImport = $this->splitFilesToImportBy50K($tmpfname);
@@ -616,7 +624,7 @@ Allowed values: %s|%s|%s',
 
         $this->executeCommand('pimee:assets:migrate:migrate-asset-category-labels', [
             $assetFamilyCode,
-            sprintf('--categories-attribute-code=%s', self::CATEGORIES)
+            sprintf('--categories-attribute-code=%s', $this->fieldNameProvider->get(FieldNameProvider::CATEGORIES))
         ], $this->pimPath);
 
         $this->io->success(sprintf("Family %s successfully imported", $assetFamilyCode));
@@ -630,7 +638,8 @@ Allowed values: %s|%s|%s',
         ?string $withVariations,
         ?string $withEndOfUse,
         ?string $convertCategoryToOption,
-        ?string $convertTagToOption
+        ?string $convertTagToOption,
+        ?string $mapping
     ) {
         $assetFamilyCodes = $this->splitAndFill($assetCsvFilename);
 
@@ -645,7 +654,8 @@ Allowed values: %s|%s|%s',
                 $withVariations,
                 $withEndOfUse,
                 $convertCategoryToOption,
-                $convertTagToOption
+                $convertTagToOption,
+                $mapping
             );
 
             $this->io->writeln(sprintf('Deletion of the temporary file "%s"...', $filename));
