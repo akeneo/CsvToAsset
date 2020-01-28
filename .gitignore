@@ -52,5 +52,5 @@
 /.web-server-pid
 
 credentials
-.env.local
+.env
 docker-compose.override.yml

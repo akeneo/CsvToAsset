@@ -54,6 +54,9 @@ class MigrateCommand extends Command
     /** @var FieldNameProvider */
     private $fieldNameProvider;
 
+    /** @var string[] */
+    private $remainingCommands;
+
     public function __construct(
         CreateFamilyCommand $createFamilyCommand,
         MergeAssetsAndVariationsFilesCommand $mergeAssetsAndVariationsFilesCommand
@@ -164,6 +167,7 @@ Allowed values: %s|%s|%s',
 
     public function execute(InputInterface $input, OutputInterface $output)
     {
+        $this->remainingCommands = [];
         $this->io = new SymfonyStyle($input, $output);
         $this->io->title('Migration of your assets');
 
@@ -222,6 +226,14 @@ Allowed values: %s|%s|%s',
         }
 
         $this->io->success('Migration success!');
+
+        if (!empty($this->remainingCommands)) {
+            $this->io->warning(sprintf("Warning: as you did not specify pim-path parameter, the category labels were not translated.\nPlease run these commands in your PIM instance:"));
+            foreach ($this->remainingCommands as $remainingCommand) {
+                $this->io->writeln($remainingCommand);
+            }
+            $this->io->newLine(2);
+        }
     }
 
     private function executeCommand(string $name, array $arguments, ?string $path = null)
@@ -622,10 +634,18 @@ Allowed values: %s|%s|%s',
             $this->executeCommand('app:import', [$fileToImport, $assetFamilyCode, '-vvv']);
         }
 
-        $this->executeCommand('pimee:assets:migrate:migrate-asset-category-labels', [
-            $assetFamilyCode,
-            sprintf('--categories-attribute-code=%s', $this->fieldNameProvider->get(FieldNameProvider::CATEGORIES))
-        ], $this->pimPath);
+        if (!empty($this->pimPath)) {
+            $this->executeCommand('pimee:assets:migrate:migrate-asset-category-labels', [
+                sprintf('--env=%s', $_SERVER['APP_ENV']),
+                $assetFamilyCode,
+                sprintf('--categories-attribute-code=%s', $this->fieldNameProvider->get(FieldNameProvider::CATEGORIES))
+            ], $this->pimPath);
+        } else {
+            $this->remainingCommands[] = sprintf('bin/console pimee:assets:migrate:migrate-asset-category-labels %s %s',
+                $assetFamilyCode,
+                sprintf('--categories-attribute-code=%s', $this->fieldNameProvider->get(FieldNameProvider::CATEGORIES))
+            );
+        }
 
         $this->io->success(sprintf("Family %s successfully imported", $assetFamilyCode));
     }

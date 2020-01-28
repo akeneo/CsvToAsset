@@ -28,12 +28,12 @@ You're ready to migrate your assets!
 
 ## Setup
 
-You need to copy the [.env](https://symfony.com/doc/current/components/dotenv.html) file:
+You need to copy the [.env.dist](https://symfony.com/doc/current/components/dotenv.html) file:
 ```bash
-cp .env .env.local
+cp .env.dist .env
 ```
 
-Then open `.env.local` to define the needed configuration vars:
+Then open `.env` to define the needed configuration vars:
 - `AKENEO_API_BASE_URI` refers to the URL of your PIM Enterprise Edition, used for API calls.
    For example, `http://localhost:80`.
    If you use Docker, set this value to `http://httpd:80` (or `https://httpd:443` if you use SSL).

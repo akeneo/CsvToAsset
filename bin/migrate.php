@@ -67,10 +67,11 @@ function executeCommand($arguments, $path, $callback)
 }
 
 executeCommand(
-    ['bin/console', 'pimee:migrate-pam-assets:export-assets', '--ansi', '/tmp'],
+    ['bin/console', 'pimee:migrate-pam-assets:export-assets', '--ansi', sprintf('--env=%s', $_ENV['APP_ENV']), '/tmp'],
     $pimPath,
     function ($output) { }
 );
+
 
 const CLIENT_LABEL = 'migrations_pam';
 
@@ -103,15 +104,14 @@ if (null === $credentials) {
     $io->success(sprintf('Credentials already existing in file "%s".', CredentialReader::FILENAME));
 }
 
-
 executeCommand(
-    ['bin/console', 'app:migrate', '--ansi', '/tmp/assets.csv', '/tmp/variations.csv',  $pimPath, sprintf('--asset-family-code=%s', $assetFamilyCode)],
+    ['bin/console', 'app:migrate', '--ansi', sprintf('--env=%s', $_ENV['APP_ENV']), '/tmp/assets.csv', '/tmp/variations.csv',  $pimPath, sprintf('--asset-family-code=%s', $assetFamilyCode)],
     null,
     function ($output) { }
 );
 
 executeCommand(
-    ['bin/console', 'pimee:assets:migrate:migrate-pam-attributes', '--ansi', $assetFamilyCode],
+    ['bin/console', 'pimee:assets:migrate:migrate-pam-attributes', '--ansi', sprintf('--env=%s', $_ENV['APP_ENV']), $assetFamilyCode],
     $pimPath,
     function ($output) { }
 );
