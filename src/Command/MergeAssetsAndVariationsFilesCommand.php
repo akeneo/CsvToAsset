@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Command;
 
+use App\FieldNameProvider;
 use App\Reader\CsvReader;
 use Box\Spout\Common\Exception\IOException;
 use Box\Spout\Common\Exception\UnsupportedTypeException;
@@ -32,18 +33,10 @@ class MergeAssetsAndVariationsFilesCommand extends Command
     private const CSV_FIELD_ENCLOSURE = '"';
     private const CSV_END_OF_LINE_CHARACTER = "\n";
 
-    private const REFERENCE_FILE_FIELD = 'reference';
-    private const VARIATION_FILE_FIELD = 'variation_scopable';
-    private const LOCALIZED_REFERENCE_FILE_FIELD = 'reference_localizable';
-    private const LOCALIZED_VARIATION_FILE_FIELD = 'variation_localizable_scopable';
-
     private const LOCALIZABLE = 'localizable';
     private const NON_LOCALIZABLE = 'non-localizable';
     private const BOTH = 'both';
 
-    private const END_OF_USE = 'end_of_use';
-
-    private const CATEGORIES = 'categories';
     private const YES = 'yes';
     private const NO = 'no';
 
@@ -80,6 +73,9 @@ class MergeAssetsAndVariationsFilesCommand extends Command
     /** @var string */
     private $withEndOfUse;
 
+    /** @var FieldNameProvider */
+    private $fieldNameProvider;
+
     protected function configure()
     {
         $this
@@ -97,8 +93,7 @@ class MergeAssetsAndVariationsFilesCommand extends Command
                 self::BOTH
             )
             ->addOption('with-categories', null, InputOption::VALUE_OPTIONAL,
-                sprintf('Add the "%s" column to the merged file or not to import it to the generated assets. Allowed values: %s|%s',
-                    self::CATEGORIES,
+                sprintf('Add a categories column to the merged file or not to import it to the generated assets. Allowed values: %s|%s',
                     self::YES,
                     self::NO
                 ),
@@ -118,6 +113,7 @@ class MergeAssetsAndVariationsFilesCommand extends Command
                 ),
                 self::YES
             )
+            ->addOption('mapping', null, InputOption::VALUE_OPTIONAL, 'Use this file for your fields mapping', null)
         ;
     }
 
@@ -142,6 +138,8 @@ class MergeAssetsAndVariationsFilesCommand extends Command
         $this->withEndOfUse = $input->getOption('with-end-of-use');
         ArgumentChecker::assertOptionIsAllowed($this->withEndOfUse, 'with-end-of-use', [self::YES, self::NO]);
 
+        $this->fieldNameProvider = new FieldNameProvider($input->getOption('mapping'));
+
         $this->io->title('Merge PAM Assets CSV file with PAM Variation CSV file');
         $this->io->text([
             sprintf('This command will merge a given PAM Asset CSV file with a given Variations CSV file into one single file: "%s"', $targetFilePath),
@@ -150,8 +148,7 @@ class MergeAssetsAndVariationsFilesCommand extends Command
 
         if ($this->withCategories === self::NO) {
             $this->io->text([
-                sprintf('This command will remove the column "%s" of the "%s" file before merging the files.',
-                self::CATEGORIES,
+                sprintf('This command will remove the categories column of the "%s" file before merging the files.',
                 $assetsFilePath)
             ]);
         }
@@ -254,7 +251,7 @@ class MergeAssetsAndVariationsFilesCommand extends Command
 
         if ($this->withCategories === self::NO) {
             // Removes the "categories" field from headers
-            $index = array_search(self::CATEGORIES, $assetHeaders);
+            $index = array_search(FieldNameProvider::CATEGORIES, $assetHeaders);
             if ($index !== FALSE){
                 unset($assetHeaders[$index]);
             }
@@ -262,31 +259,40 @@ class MergeAssetsAndVariationsFilesCommand extends Command
 
         if ($this->withEndOfUse === self::NO) {
             // Removes the "end_of_use" field from headers
-            $index = array_search(self::END_OF_USE, $assetHeaders);
+            $index = array_search(FieldNameProvider::END_OF_USE, $assetHeaders);
             if ($index !== FALSE){
                 unset($assetHeaders[$index]);
             }
         }
 
+        $mappedAssetHeaders = [];
+        foreach ($assetHeaders as $assetHeader) {
+            try {
+                $mappedAssetHeaders[] = $this->fieldNameProvider->get($assetHeader);
+            } catch (\InvalidArgumentException $e) {
+                $mappedAssetHeaders[] = $assetHeader;
+            }
+        }
+
         foreach ($this->channels as $channel) {
             if ($this->referenceType === self::NON_LOCALIZABLE || $this->referenceType === self::BOTH) {
-                $valuesHeaders[] = sprintf('%s-%s', self::REFERENCE_FILE_FIELD, $channel);
+                $valuesHeaders[] = sprintf('%s-%s', $this->fieldNameProvider->get(FieldNameProvider::REFERENCE), $channel);
                 if ($this->withVariations === self::YES) {
-                    $valuesHeaders[] = sprintf('%s-%s', self::VARIATION_FILE_FIELD, $channel);
+                    $valuesHeaders[] = sprintf('%s-%s', $this->fieldNameProvider->get(FieldNameProvider::VARIATION_SCOPABLE), $channel);
                 }
             }
 
             if ($this->referenceType === self::LOCALIZABLE || $this->referenceType === self::BOTH) {
                 foreach ($this->locales as $locale) {
-                    $valuesHeaders[] = sprintf('%s-%s-%s', self::LOCALIZED_REFERENCE_FILE_FIELD, $locale, $channel);
+                    $valuesHeaders[] = sprintf('%s-%s-%s', $this->fieldNameProvider->get(FieldNameProvider::REFERENCE_LOCALIZABLE), $locale, $channel);
                     if ($this->withVariations === self::YES) {
-                        $valuesHeaders[] = sprintf('%s-%s-%s', self::LOCALIZED_VARIATION_FILE_FIELD, $locale, $channel);
+                        $valuesHeaders[] = sprintf('%s-%s-%s', $this->fieldNameProvider->get(FieldNameProvider::VARIATION_LOCALIZABLE_SCOPABLE), $locale, $channel);
                     }
                 }
             }
         }
 
-        return array_merge($assetHeaders, $valuesHeaders);
+        return array_merge($mappedAssetHeaders, $valuesHeaders);
     }
 
     /**
@@ -326,15 +332,15 @@ class MergeAssetsAndVariationsFilesCommand extends Command
      */
     private function mergeAssetAndVariations(array $oldAsset, array $variations): array
     {
-        $structure = $this->getAssetManagerFileHeaders();
-        $structure = array_fill_keys(array_keys(array_flip($structure)), null);
+        $mappedStructure = $this->getAssetManagerFileHeaders();
+        $mappedStructure = array_fill_keys(array_keys(array_flip($mappedStructure)), null);
 
         foreach ($variations as $variation) {
             if (!empty($variation['locale'])) {
                 if ($this->referenceType === self::LOCALIZABLE || $this->referenceType === self::BOTH) {
-                    $structure[sprintf('%s-%s-%s', self::LOCALIZED_REFERENCE_FILE_FIELD, $variation['locale'], $variation['channel'])] = $variation['reference_file'];
+                    $mappedStructure[sprintf('%s-%s-%s', $this->fieldNameProvider->get(FieldNameProvider::REFERENCE_LOCALIZABLE), $variation['locale'], $variation['channel'])] = $variation['reference_file'];
                     if ($this->withVariations === self::YES) {
-                        $structure[sprintf('%s-%s-%s', self::LOCALIZED_VARIATION_FILE_FIELD, $variation['locale'], $variation['channel'])] = $variation['variation_file'];
+                        $mappedStructure[sprintf('%s-%s-%s', $this->fieldNameProvider->get(FieldNameProvider::VARIATION_LOCALIZABLE_SCOPABLE), $variation['locale'], $variation['channel'])] = $variation['variation_file'];
                     }
                 } else {
                     throw new \RuntimeException(sprintf(
@@ -346,9 +352,9 @@ class MergeAssetsAndVariationsFilesCommand extends Command
                 }
             } else {
                 if ($this->referenceType === self::NON_LOCALIZABLE || $this->referenceType === self::BOTH) {
-                    $structure[sprintf('%s-%s', self::REFERENCE_FILE_FIELD, $variation['channel'])] = $variation['reference_file'];
+                    $mappedStructure[sprintf('%s-%s', $this->fieldNameProvider->get(FieldNameProvider::REFERENCE), $variation['channel'])] = $variation['reference_file'];
                     if ($this->withVariations === self::YES) {
-                        $structure[sprintf('%s-%s', self::VARIATION_FILE_FIELD, $variation['channel'])] = $variation['variation_file'];
+                        $mappedStructure[sprintf('%s-%s', $this->fieldNameProvider->get(FieldNameProvider::VARIATION_SCOPABLE), $variation['channel'])] = $variation['variation_file'];
                     }
                 } else {
                     throw new \RuntimeException(sprintf(
@@ -361,13 +367,22 @@ class MergeAssetsAndVariationsFilesCommand extends Command
         }
 
         if ($this->withCategories === self::NO) {
-            unset($oldAsset[self::CATEGORIES]);
+            unset($oldAsset[FieldNameProvider::CATEGORIES]);
         }
         if ($this->withEndOfUse === self::NO) {
-            unset($oldAsset[self::END_OF_USE]);
+            unset($oldAsset[FieldNameProvider::END_OF_USE]);
         }
 
-        return array_merge($structure, $oldAsset);
+        $mappedOldAsset = [];
+        foreach ($oldAsset as $oldAssetKey => $oldAssetValue) {
+            try {
+                $mappedOldAsset[$this->fieldNameProvider->get($oldAssetKey)] = $oldAssetValue;
+            } catch (\InvalidArgumentException $e) {
+                $mappedOldAsset[$oldAssetKey] = $oldAssetValue;
+            }
+        }
+
+        return array_merge($mappedStructure, $mappedOldAsset);
     }
 
     /**
