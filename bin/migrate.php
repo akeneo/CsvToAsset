@@ -13,7 +13,10 @@
 - In the PIM : run 'migrate-pam-attributes' command
 */
 
+use Symfony\Component\Console\Exception\RuntimeException;
 use Symfony\Component\Console\Input\ArgvInput;
+use Symfony\Component\Console\Input\ArrayInput;
+use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Process\Process;
 use Symfony\Component\Console\Input\InputDefinition;
 use Symfony\Component\Console\Input\InputArgument;
@@ -28,16 +31,38 @@ $io = new SymfonyStyle(new ArgvInput(), new ConsoleOutput());
 
 $inputDefinition = new InputDefinition([
     new InputArgument('asset-family-code', InputArgument::REQUIRED),
-    new InputArgument('pim-path', InputArgument::REQUIRED)
+    new InputArgument('pim-path', InputArgument::REQUIRED),
+    new InputOption('--help', '-h', InputOption::VALUE_NONE, 'Display this help message'),
 ]);
+
+if (count(array_intersect($_SERVER['argv'], ['-h', '--help']))) {
+    $io->writeln(sprintf("<comment>Description:</comment>
+  Migrate an asset family in full-automatic scenario
+
+<comment>Usage:</comment>
+  %s
+
+<comment>Arguments:</comment>
+  <info>asset-family-code</info>  The asset family code to create
+  <info>pim-path</info>           The path to your PIM Enterprise Edition installation'
+
+<comment>Options:</comment>
+  <info>-h, --help</info>         Display this help message
+",
+        $_SERVER['argv'][0] . ' ' . $inputDefinition->getSynopsis(true)));
+
+    die(0);
+};
 
 try {
     $input = new ArgvInput(null, $inputDefinition);
     $input->validate();
-} catch (\Exception $e) {
-    $io->error(sprintf("Input format error: please use %s %s", 'migrate.php', $inputDefinition->getSynopsis(true)));
+} catch (RuntimeException $e) {
+    $io->error($e->getMessage());
+    $io->writeln('<info>' . $_SERVER['argv'][0] . ' ' . $inputDefinition->getSynopsis(true) . '</>');
+    $io->newLine();
 
-    throw $e;
+    exit(1);
 }
 
 $assetFamilyCode = $input->getArgument('asset-family-code');
@@ -48,6 +73,11 @@ require dirname(__DIR__).'/config/bootstrap.php';
 function executeCommand($arguments, $path, $callback)
 {
     $io = new SymfonyStyle(new ArgvInput(), new ConsoleOutput());
+    if (!empty($path) && !is_dir($path)) {
+        $io->error(sprintf('The folder "%s" is not readable.', $path));
+
+        die(1);
+    }
 
     $process = new Process($arguments, $path, null, null, null);
     $process->start();

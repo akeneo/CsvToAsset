@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Command;
 
+use Akeneo\Pim\ApiClient\Exception\UnprocessableEntityHttpException;
 use Akeneo\PimEnterprise\ApiClient\AkeneoPimEnterpriseClientBuilder;
 use Akeneo\PimEnterprise\ApiClient\AkeneoPimEnterpriseClientInterface;
 use App\FieldNameProvider;
@@ -153,58 +154,65 @@ class CreateFamilyCommand extends Command
 
         $this->io->newLine();
 
-        $this->client->getAssetFamilyApi()->upsert($this->assetFamilyCode, [
-            'code' => $this->assetFamilyCode,
-            'labels' => new \stdClass(), // TODO AST-239 Need to set at least 1 label, else the UI fail :/
-        ]);
+        try {
+            $this->client->getAssetFamilyApi()->upsert($this->assetFamilyCode, [
+                'code' => $this->assetFamilyCode,
+                'labels' => new \stdClass(), // TODO AST-239 Need to set at least 1 label, else the UI fail :/
+            ]);
 
-        if ($referenceType === self::NON_LOCALIZABLE) {
-            $this->createNonLocalizableAttributes($withVariations);
-        };
+            if ($referenceType === self::NON_LOCALIZABLE) {
+                $this->createNonLocalizableAttributes($withVariations);
+            };
 
-        if ($referenceType === self::LOCALIZABLE) {
-            $this->createLocalizableAttributes($withVariations);
-        }
-
-        if ($referenceType === self::BOTH) {
-            $this->createNonLocalizableAttributes($withVariations);
-            $this->createLocalizableAttributes($withVariations);
-        }
-
-        $this->createAttribute($this->fieldNameProvider->get(FieldNameProvider::DESCRIPTION), 'text', false, false, false);
-
-        if ($withCategories === self::YES) {
-            if ($categoryOptions === null) {
-                $this->createAttribute($this->fieldNameProvider->get(FieldNameProvider::CATEGORIES), 'text', false, false, false);
-            } else {
-                $this->createAttribute($this->fieldNameProvider->get(FieldNameProvider::CATEGORIES), 'multiple_options', false, false, false);
-                $this->createCategoryOptions($categoryOptions);
+            if ($referenceType === self::LOCALIZABLE) {
+                $this->createLocalizableAttributes($withVariations);
             }
-        } else {
-            $this->io->writeln(sprintf('Skip creation of attribute "%s"...', $this->fieldNameProvider->get(FieldNameProvider::CATEGORIES)));
+
+            if ($referenceType === self::BOTH) {
+                $this->createNonLocalizableAttributes($withVariations);
+                $this->createLocalizableAttributes($withVariations);
+            }
+
+            $this->createAttribute($this->fieldNameProvider->get(FieldNameProvider::DESCRIPTION), 'text', false, false, false);
+
+            if ($withCategories === self::YES) {
+                if ($categoryOptions === null) {
+                    $this->createAttribute($this->fieldNameProvider->get(FieldNameProvider::CATEGORIES), 'text', false, false, false);
+                } else {
+                    $this->createAttribute($this->fieldNameProvider->get(FieldNameProvider::CATEGORIES), 'multiple_options', false, false, false);
+                    $this->createCategoryOptions($categoryOptions);
+                }
+            } else {
+                $this->io->writeln(sprintf('Skip creation of attribute "%s"...', $this->fieldNameProvider->get(FieldNameProvider::CATEGORIES)));
+            }
+
+            if ($tagOptions === null) {
+                $this->createAttribute($this->fieldNameProvider->get(FieldNameProvider::TAGS), 'text', false, false, false);
+            } else {
+                $this->createAttribute($this->fieldNameProvider->get(FieldNameProvider::TAGS), 'multiple_options', false, false, false);
+                $this->createTagOptions($tagOptions);
+            }
+
+            if ($withEndOfUse === self::YES) {
+                $this->createAttribute($this->fieldNameProvider->get(FieldNameProvider::END_OF_USE), 'text', false, false, false);
+            } else {
+                $this->io->writeln(sprintf('Skip creation of attribute "%s"...', $this->fieldNameProvider->get(FieldNameProvider::END_OF_USE)));
+            }
+
+            $this->io->writeln(sprintf('Update "%s" attribute as main media...', $attributeAsMainMedia));
+
+            $this->client->getAssetFamilyApi()->upsert($this->assetFamilyCode, [
+                'code' => $this->assetFamilyCode,
+                'attribute_as_main_media' => $attributeAsMainMedia,
+            ]);
+
+            $this->io->success(sprintf('Family "%s" created!', $this->assetFamilyCode));
+        } catch (UnprocessableEntityHttpException $e) {
+            // For this exception, we add the internal error to help the migration to not fail.
+            $this->io->error(sprintf("An error occured during the API call:\n%s", json_encode($e->getResponseErrors())));
+
+            throw $e;
         }
-
-        if ($tagOptions === null) {
-            $this->createAttribute($this->fieldNameProvider->get(FieldNameProvider::TAGS), 'text', false, false, false);
-        } else {
-            $this->createAttribute($this->fieldNameProvider->get(FieldNameProvider::TAGS), 'multiple_options', false, false, false);
-            $this->createTagOptions($tagOptions);
-        }
-
-        if ($withEndOfUse === self::YES) {
-            $this->createAttribute($this->fieldNameProvider->get(FieldNameProvider::END_OF_USE), 'text', false, false, false);
-        } else {
-            $this->io->writeln(sprintf('Skip creation of attribute "%s"...', $this->fieldNameProvider->get(FieldNameProvider::END_OF_USE)));
-        }
-
-        $this->io->writeln(sprintf('Update "%s" attribute as main media...', $attributeAsMainMedia));
-
-        $this->client->getAssetFamilyApi()->upsert($this->assetFamilyCode, [
-            'code' => $this->assetFamilyCode,
-            'attribute_as_main_media' => $attributeAsMainMedia,
-        ]);
-
-        $this->io->success(sprintf('Family "%s" created!', $this->assetFamilyCode));
     }
 
     private function createAttribute(string $attributeCode, string $type, bool $localizable, bool $scopable, bool $required)

@@ -495,7 +495,7 @@ Allowed values: %s|%s|%s',
                 $this->io->writeln('You did not set the <options=bold>--reference-type</> option.');
                 $this->io->writeln(sprintf('If all your assets are localized, choose <options=bold>%s</>', self::LOCALIZABLE));
                 $this->io->writeln(sprintf('If all your assets are not localized, choose <options=bold>%s</>', self::NON_LOCALIZABLE));
-                $this->io->writeln(sprintf('If you have both localizable and non localizable assets in this family, <options=bold>%s</>', self::BOTH));
+                $this->io->writeln(sprintf('If you have both localizable and non localizable assets in this family, choose <options=bold>%s</>', self::BOTH));
                 $newReferenceType = $this->guessReferenceType($assetCsvFilename);
                 $referenceType = $this->io->askQuestion(new ChoiceQuestion(
                     'Please pick a value for your reference type',
@@ -634,17 +634,19 @@ Allowed values: %s|%s|%s',
             $this->executeCommand('app:import', [$fileToImport, $assetFamilyCode, '-vvv']);
         }
 
-        if (!empty($this->pimPath)) {
-            $this->executeCommand('pimee:assets:migrate:migrate-asset-category-labels', [
-                sprintf('--env=%s', $_SERVER['APP_ENV']),
-                $assetFamilyCode,
-                sprintf('--categories-attribute-code=%s', $this->fieldNameProvider->get(FieldNameProvider::CATEGORIES))
-            ], $this->pimPath);
-        } else {
-            $this->remainingCommands[] = sprintf('bin/console pimee:assets:migrate:migrate-asset-category-labels %s %s',
-                $assetFamilyCode,
-                sprintf('--categories-attribute-code=%s', $this->fieldNameProvider->get(FieldNameProvider::CATEGORIES))
-            );
+        if ($withCategories) {
+            if (!empty($this->pimPath)) {
+                $this->executeCommand('pimee:assets:migrate:migrate-asset-category-labels', [
+                    sprintf('--env=%s', $_SERVER['APP_ENV']),
+                    $assetFamilyCode,
+                    sprintf('--categories-attribute-code=%s', $this->fieldNameProvider->get(FieldNameProvider::CATEGORIES))
+                ], $this->pimPath);
+            } else {
+                $this->remainingCommands[] = sprintf('bin/console pimee:assets:migrate:migrate-asset-category-labels %s %s',
+                    $assetFamilyCode,
+                    sprintf('--categories-attribute-code=%s', $this->fieldNameProvider->get(FieldNameProvider::CATEGORIES))
+                );
+            }
         }
 
         $this->io->success(sprintf("Family %s successfully imported", $assetFamilyCode));
