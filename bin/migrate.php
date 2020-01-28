@@ -6,7 +6,7 @@
 
 - in the PIM : Run 'export-pam-assets' and put them int tmp folder
 - in the PIM : Run 'create-api-credentials' and store them
-- Use the CSVToAsset tool (and the API credentials + CSV files) to run "make migration" and a default asset-family-code
+- Use the CSVToAsset tool (and the API credentials + CSV files) to run "make migration" and a default asset_family_code
     - In the CSVToAsset: run create asset family
     - In the CSVToAsset: run merge 2 CSV files in 1
     - In the CSVToAsset: run import assets into the PIM through API
@@ -15,7 +15,6 @@
 
 use Symfony\Component\Console\Exception\RuntimeException;
 use Symfony\Component\Console\Input\ArgvInput;
-use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Process\Process;
 use Symfony\Component\Console\Input\InputDefinition;
@@ -30,8 +29,8 @@ require dirname(__DIR__).'/vendor/autoload.php';
 $io = new SymfonyStyle(new ArgvInput(), new ConsoleOutput());
 
 $inputDefinition = new InputDefinition([
-    new InputArgument('asset-family-code', InputArgument::REQUIRED),
-    new InputArgument('pim-path', InputArgument::REQUIRED),
+    new InputArgument('asset_family_code', InputArgument::REQUIRED),
+    new InputArgument('pim_path', InputArgument::REQUIRED),
     new InputOption('--help', '-h', InputOption::VALUE_NONE, 'Display this help message'),
 ]);
 
@@ -43,8 +42,8 @@ if (count(array_intersect($_SERVER['argv'], ['-h', '--help']))) {
   %s
 
 <comment>Arguments:</comment>
-  <info>asset-family-code</info>  The asset family code to create
-  <info>pim-path</info>           The path to your PIM Enterprise Edition installation'
+  <info>asset_family_code</info>  The asset family code to create
+  <info>pim_path</info>           The path to your PIM Enterprise Edition installation'
 
 <comment>Options:</comment>
   <info>-h, --help</info>         Display this help message
@@ -65,8 +64,8 @@ try {
     exit(1);
 }
 
-$assetFamilyCode = $input->getArgument('asset-family-code');
-$pimPath = $input->getArgument('pim-path');
+$assetFamilyCode = $input->getArgument('asset_family_code');
+$pimPath = $input->getArgument('pim_path');
 
 require dirname(__DIR__).'/config/bootstrap.php';
 
@@ -135,10 +134,13 @@ if (null === $credentials) {
 }
 
 executeCommand(
-    ['bin/console', 'app:migrate', '--ansi', sprintf('--env=%s', $_ENV['APP_ENV']), '/tmp/assets.csv', '/tmp/variations.csv',  $pimPath, sprintf('--asset-family-code=%s', $assetFamilyCode)],
+    ['bin/console', 'app:migrate', '--ansi', sprintf('--env=%s', $_ENV['APP_ENV']), '/tmp/assets.csv', '/tmp/variations.csv',  $pimPath, sprintf('--asset_family_code=%s', $assetFamilyCode)],
     null,
     function ($output) { }
 );
+
+$io->title('Update the PAM attributes to Asset Manager attributes');
+$io->writeln('This command will update the type of the existing attributes in your PIM instance to match the new Asset Manager type.');
 
 executeCommand(
     ['bin/console', 'pimee:assets:migrate:migrate-pam-attributes', '--ansi', sprintf('--env=%s', $_ENV['APP_ENV']), $assetFamilyCode],
@@ -146,6 +148,8 @@ executeCommand(
     function ($output) { }
 );
 
-$io->warning(sprintf('Don\'t forget to remove the API credential file located in the file "%s". It contains sensitive data to connect to your PIM instance.', CredentialReader::FILENAME));
-$io->success('Asset were fully migrated!');
+$io->title('Warning!');
+$io->writeln(sprintf("<comment>Don't forget to remove the API credential file located in the file \"%s\".\nIt contains sensitive data to connect to your PIM instance.", CredentialReader::FILENAME));
+
+$io->success('All your assets were fully migrated!');
 

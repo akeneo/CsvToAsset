@@ -54,8 +54,8 @@ class CreateFamilyCommand extends Command
     {
         $this
             ->setDescription('Create an Asset Family')
-            ->addArgument('asset-family-code', InputArgument::REQUIRED, 'The asset family code to create')
-            ->addOption('reference-type', null, InputOption::VALUE_OPTIONAL,
+            ->addArgument('asset_family_code', InputArgument::REQUIRED, 'The asset family code to create')
+            ->addOption('reference_type', null, InputOption::VALUE_OPTIONAL,
                 sprintf(
                     'Enable if media reference is localizable or not. Allowed values: %s|%s|%s',
                     self::LOCALIZABLE,
@@ -64,7 +64,7 @@ class CreateFamilyCommand extends Command
                 ),
                 self::BOTH
             )
-            ->addOption('with-categories', null, InputOption::VALUE_OPTIONAL,
+            ->addOption('with_categories', null, InputOption::VALUE_OPTIONAL,
                 sprintf('Create %s field or not. Allowed values: %s|%s',
                     FieldNameProvider::CATEGORIES,
                     self::YES,
@@ -72,24 +72,24 @@ class CreateFamilyCommand extends Command
                 ),
                 self::YES
             )
-            ->addOption('with-variations', null, InputOption::VALUE_OPTIONAL,
+            ->addOption('with_variations', null, InputOption::VALUE_OPTIONAL,
                 sprintf('Create variation field(s) or not. Allowed values: %s|%s',
                     self::YES,
                     self::NO
                 ),
                 self::YES
             )
-            ->addOption('with-end-of-use', null, InputOption::VALUE_OPTIONAL,
+            ->addOption('with_end_of_use', null, InputOption::VALUE_OPTIONAL,
                 sprintf('Create end_of_use field or not. Allowed values: %s|%s',
                     self::YES,
                     self::NO
                 ),
             self::YES
             )
-            ->addOption('category-options', null, InputOption::VALUE_OPTIONAL,
+            ->addOption('category_options', null, InputOption::VALUE_OPTIONAL,
                 sprintf('Create %s field as a "multiple_options" attribute with these options (comma-separated) instead of text attributes', FieldNameProvider::CATEGORIES),
             )
-            ->addOption('tag-options', null, InputOption::VALUE_OPTIONAL,
+            ->addOption('tag_options', null, InputOption::VALUE_OPTIONAL,
                 sprintf('Create %s field as a "multiple_options" attribute with these options (comma-separated)', FieldNameProvider::TAGS),
             )
             ->addOption('mapping', null, InputOption::VALUE_OPTIONAL, 'Use this file for your fields mapping', null)
@@ -99,23 +99,23 @@ class CreateFamilyCommand extends Command
     public function execute(InputInterface $input, OutputInterface $output)
     {
         $this->io = new SymfonyStyle($input, $output);
-        $this->assetFamilyCode = $input->getArgument('asset-family-code');
+        $this->assetFamilyCode = $input->getArgument('asset_family_code');
 
-        $referenceType = $input->getOption('reference-type');
-        ArgumentChecker::assertOptionIsAllowed($referenceType, 'reference-type', [self::LOCALIZABLE, self::NON_LOCALIZABLE, self::BOTH]);
+        $referenceType = $input->getOption('reference_type');
+        ArgumentChecker::assertOptionIsAllowed($referenceType, 'reference_type', [self::LOCALIZABLE, self::NON_LOCALIZABLE, self::BOTH]);
 
-        $withCategories = $input->getOption('with-categories');
-        ArgumentChecker::assertOptionIsAllowed($withCategories, 'with-categories', [self::YES, self::NO]);
+        $withCategories = $input->getOption('with_categories');
+        ArgumentChecker::assertOptionIsAllowed($withCategories, 'with_categories', [self::YES, self::NO]);
 
-        $withVariations = $input->getOption('with-variations');
-        ArgumentChecker::assertOptionIsAllowed($withVariations, 'with-variations', [self::YES, self::NO]);
+        $withVariations = $input->getOption('with_variations');
+        ArgumentChecker::assertOptionIsAllowed($withVariations, 'with_variations', [self::YES, self::NO]);
 
-        $withEndOfUse = $input->getOption('with-end-of-use');
-        ArgumentChecker::assertOptionIsAllowed($withEndOfUse, 'with-end-of-use', [self::YES, self::NO]);
+        $withEndOfUse = $input->getOption('with_end_of_use');
+        ArgumentChecker::assertOptionIsAllowed($withEndOfUse, 'with_end_of_use', [self::YES, self::NO]);
 
         $this->fieldNameProvider = new FieldNameProvider($input->getOption('mapping'));
 
-        $categoryOptions = $input->getOption('category-options');
+        $categoryOptions = $input->getOption('category_options');
         if (!empty($categoryOptions)) {
             $categoryOptions = array_filter(explode(',', $categoryOptions), function (string $categoryOption) {
                 return !empty($categoryOption);
@@ -124,7 +124,7 @@ class CreateFamilyCommand extends Command
             $categoryOptions = null;
         }
 
-        $tagOptions = $input->getOption('tag-options');
+        $tagOptions = $input->getOption('tag_options');
         if (!empty($tagOptions)) {
             $tagOptions = array_filter(explode(',', $tagOptions), function (string $tagOption) {
                 return !empty($tagOption);
