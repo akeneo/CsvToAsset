@@ -157,7 +157,7 @@ class CreateFamilyCommand extends Command
         try {
             $this->client->getAssetFamilyApi()->upsert($this->assetFamilyCode, [
                 'code' => $this->assetFamilyCode,
-                'labels' => new \stdClass(), // TODO AST-239 Need to set at least 1 label, else the UI fail :/
+                'labels' => new \stdClass(),
             ]);
 
             if ($referenceType === self::NON_LOCALIZABLE) {
