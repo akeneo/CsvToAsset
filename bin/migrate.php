@@ -73,7 +73,7 @@ function executeCommand($arguments, $path, $callback)
 {
     $io = new SymfonyStyle(new ArgvInput(), new ConsoleOutput());
     if (!empty($path) && !is_dir($path)) {
-        $io->error(sprintf('The folder "%s" is not readable.', $path));
+        $io->error(sprintf('The pim folder "%s" is not accessible.', $path));
 
         die(1);
     }
@@ -152,4 +152,3 @@ $io->title('Warning!');
 $io->writeln(sprintf("<comment>Don't forget to remove the API credential file located in the file \"%s\".\nIt contains sensitive data to connect to your PIM instance.", CredentialReader::FILENAME));
 
 $io->success('All your assets were fully migrated!');
-
