@@ -68,19 +68,19 @@ class MigrateCommand extends Command
     {
         $this
             ->setDescription("Migrate your assets
-    You can specify the argument 'asset-family-code' if you want to create only 1 asset family.
-    If you don't specify this argument, you will need an extra column called 'asset' in your assets CSV file.
-    If you only have non localizable assets, it will create and migrate an asset family with a non localizable reference and non localizable variations.
-    If you only have localizable assets, it will create and migrate an asset family with localizable reference and localizable variations.
-    If you have localizable and non localizable assets, it will create an asset family with both fields.")
-            ->addArgument('assets-csv-filename', InputArgument::OPTIONAL, 'The path to the Assets CSV file', self::ASSETS_CSV_FILENAME)
-            ->addArgument('variations-csv-filename', InputArgument::OPTIONAL, 'The path to the Variations CSV file', self::VARIATIONS_CSV_FILENAME)
-            ->addArgument('pim-path', InputArgument::OPTIONAL, 'The path to your PIM Enterprise Edition installation')
-            ->addOption('asset-family-code', null, InputOption::VALUE_OPTIONAL, 'The asset family code to migrate', null)
-            ->addOption('reference-type', null, InputOption::VALUE_OPTIONAL,
+    You can specify the argument 'asset_family_code' if you want to create only 1 asset family.
+    If you don't specify this argument, you will need an extra column called 'asset' in your asset CSV file.
+    If you only have non-localizable assets, it will create and migrate an asset family with a non-localizable reference and non-localizable variations.
+    If you only have localizable assets, it will create and migrate an asset family with a localizable reference and localizable variations.
+    If you have localizable and non-localizable assets, it will create an asset family with both fields.")
+            ->addArgument('assets_csv_filename', InputArgument::OPTIONAL, 'The path to the Assets CSV file', self::ASSETS_CSV_FILENAME)
+            ->addArgument('variations_csv_filename', InputArgument::OPTIONAL, 'The path to the Variations CSV file', self::VARIATIONS_CSV_FILENAME)
+            ->addArgument('pim_path', InputArgument::OPTIONAL, 'The path to your PIM Enterprise Edition installation')
+            ->addOption('asset_family_code', null, InputOption::VALUE_OPTIONAL, 'The asset family code to migrate', null)
+            ->addOption('reference_type', null, InputOption::VALUE_OPTIONAL,
                 sprintf(
                     'Enable if reference is localizable or not. 
-When set to "%s", it will guess the value from the assets file content.
+When set to "%s", it will guess the value from the asset file content.
 Allowed values: %s|%s|%s|%s',
                     self::AUTO,
                     self::LOCALIZABLE,
@@ -90,11 +90,11 @@ Allowed values: %s|%s|%s|%s',
                 ),
                 null
             )
-            ->addOption('with-categories', null, InputOption::VALUE_OPTIONAL,
-                sprintf('Import the categories from your assets file.
-When set to "%s", your new asset family will have a categories field, and every asset will contain its former categories.
-When set to "%s", it will guess the value from the assets file content.
-It will only create the categories field if more than 1 category is found in the assets file.
+            ->addOption('with_categories', null, InputOption::VALUE_OPTIONAL,
+                sprintf('Import the categories from your asset file.
+When set to "%s", your new asset family will have a category field, and every asset will contain its former categories.
+When set to "%s", it will guess the value from the asset file content.
+It will only create the category field  if more than 1 category is found in the asset file.
 Allowed values: %s|%s|%s',
                     self::YES,
                     self::AUTO,
@@ -104,7 +104,7 @@ Allowed values: %s|%s|%s',
                 ),
                 null
             )
-            ->addOption('with-variations', null, InputOption::VALUE_OPTIONAL,
+            ->addOption('with_variations', null, InputOption::VALUE_OPTIONAL,
                 sprintf('Add the variations to your new assets
 When set to "%s", your new asset family will have variation field(s), and variations will be imported.
 Allowed values: %s|%s',
@@ -114,10 +114,10 @@ Allowed values: %s|%s',
                 ),
                 self::YES
             )
-            ->addOption('with-end-of-use', null, InputOption::VALUE_OPTIONAL,
-                sprintf('Import the "end of use" data from your assets file.
-When set to "%s", your new asset family will have a end of use field, and every asset will contain its former data.
-When set to "%s", it will guess the value from the assets file content.
+            ->addOption('with_end_of_use', null, InputOption::VALUE_OPTIONAL,
+                sprintf('Import the "end-of-use" data from your asset file.
+When set to "%s", your new asset family will have a end-of-use field, and every asset will contain its former data.
+When set to "%s", it will guess the value from the asset file content.
 Allowed values: %s|%s|%s',
                     self::YES,
                     self::AUTO,
@@ -127,12 +127,12 @@ Allowed values: %s|%s|%s',
                 ),
                 null
             )
-            ->addOption('convert-category-to-option', null, InputOption::VALUE_OPTIONAL,
+            ->addOption('convert_category_to_option', null, InputOption::VALUE_OPTIONAL,
                 sprintf('Import the categories as "multiple_options".
-When set to "%s", your new asset family will have a multiple options categories field.
-When set to "%s", your new asset family will have a text categories field.
-When set to "%s", it will guess the attribute type to set from the assets file content.
-It will use a multiple option field if you have less than %d different categories in your assets file.
+When set to "%s", your new asset family will have a multiple options category field.
+When set to "%s", your new asset family will have a text category field.
+When set to "%s", it will guess the attribute type to set from the asset file content.
+It will use a multiple option field if you have less than %d different categories in your asset file.
 Allowed values: %s|%s|%s',
                     self::YES,
                     self::NO,
@@ -144,12 +144,12 @@ Allowed values: %s|%s|%s',
                 ),
                 null
             )
-            ->addOption('convert-tag-to-option', null, InputOption::VALUE_OPTIONAL,
+            ->addOption('convert_tag_to_option', null, InputOption::VALUE_OPTIONAL,
                 sprintf('Import the tags as "multiple_options".
-When set to "%s", your new asset family will have a multiple options tags field.
-When set to "%s", your new asset family will have a text tags field.
-When set to "%s", it will guess the attribute type to set from the assets file content.
-It will use a multiple option field if you have less than %d different tags in your assets file.
+When set to "%s", your new asset family will have a multiple options tag field.
+When set to "%s", your new asset family will have a text tag field.
+When set to "%s", it will guess the attribute type to set from the asset file content.
+It will use a multiple option field if you have less than %d different tags in your asset file.
 Allowed values: %s|%s|%s',
                     self::YES,
                     self::NO,
@@ -171,32 +171,32 @@ Allowed values: %s|%s|%s',
         $this->io = new SymfonyStyle($input, $output);
         $this->io->title('Migration of your assets');
 
-        $assetCsvFilename = $input->getArgument('assets-csv-filename');
-        $variationsCsvFilename = $input->getArgument('variations-csv-filename');
+        $assetCsvFilename = $input->getArgument('assets_csv_filename');
+        $variationsCsvFilename = $input->getArgument('variations_csv_filename');
 
-        $assetFamilyCode = $input->getOption('asset-family-code');
+        $assetFamilyCode = $input->getOption('asset_family_code');
 
-        $referenceType = $input->getOption('reference-type');
-        ArgumentChecker::assertOptionIsAllowed($referenceType, 'reference-type', [self::LOCALIZABLE, self::NON_LOCALIZABLE, self::BOTH, self::AUTO, null]);
+        $referenceType = $input->getOption('reference_type');
+        ArgumentChecker::assertOptionIsAllowed($referenceType, 'reference_type', [self::LOCALIZABLE, self::NON_LOCALIZABLE, self::BOTH, self::AUTO, null]);
 
-        $withCategories = $input->getOption('with-categories');
-        ArgumentChecker::assertOptionIsAllowed($withCategories, 'with-categories', [self::YES, self::NO, self::AUTO, null]);
+        $withCategories = $input->getOption('with_categories');
+        ArgumentChecker::assertOptionIsAllowed($withCategories, 'with_categories', [self::YES, self::NO, self::AUTO, null]);
 
-        $withVariations = $input->getOption('with-variations');
-        ArgumentChecker::assertOptionIsAllowed($withVariations, 'with-variations', [self::YES, self::NO]);
+        $withVariations = $input->getOption('with_variations');
+        ArgumentChecker::assertOptionIsAllowed($withVariations, 'with_variations', [self::YES, self::NO]);
 
-        $withEndOfUse = $input->getOption('with-end-of-use');
-        ArgumentChecker::assertOptionIsAllowed($withEndOfUse, 'with-end-of-use', [self::YES, self::NO, self::AUTO, null]);
+        $withEndOfUse = $input->getOption('with_end_of_use');
+        ArgumentChecker::assertOptionIsAllowed($withEndOfUse, 'with_end_of_use', [self::YES, self::NO, self::AUTO, null]);
 
-        $convertCategoryToOption = $input->getOption('convert-category-to-option');
-        ArgumentChecker::assertOptionIsAllowed($convertCategoryToOption, 'convert-category-to-option', [self::YES, self::NO, self::AUTO, null]);
+        $convertCategoryToOption = $input->getOption('convert_category_to_option');
+        ArgumentChecker::assertOptionIsAllowed($convertCategoryToOption, 'convert_category_to_option', [self::YES, self::NO, self::AUTO, null]);
 
-        $convertTagToOption = $input->getOption('convert-tag-to-option');
-        ArgumentChecker::assertOptionIsAllowed($convertTagToOption, 'convert-tag-to-option', [self::YES, self::NO, self::AUTO, null]);
+        $convertTagToOption = $input->getOption('convert_tag_to_option');
+        ArgumentChecker::assertOptionIsAllowed($convertTagToOption, 'convert_tag_to_option', [self::YES, self::NO, self::AUTO, null]);
 
         $this->fieldNameProvider = new FieldNameProvider($input->getOption('mapping'));
 
-        $this->pimPath = $input->getArgument('pim-path');
+        $this->pimPath = $input->getArgument('pim_path');
 
         if (!empty($assetFamilyCode)) {
             $this->migrate(
@@ -225,10 +225,8 @@ Allowed values: %s|%s|%s',
             );
         }
 
-        $this->io->success('Migration success!');
-
         if (!empty($this->remainingCommands)) {
-            $this->io->warning(sprintf("Warning: as you did not specify pim-path parameter, the category labels were not translated.\nPlease run these commands in your PIM instance:"));
+            $this->io->warning(sprintf("Warning: as you did not specify pim_path parameter, the category labels were not translated.\nPlease run these commands in your PIM instance:"));
             foreach ($this->remainingCommands as $remainingCommand) {
                 $this->io->writeln($remainingCommand);
             }
@@ -264,7 +262,7 @@ Allowed values: %s|%s|%s',
     private function guessReferenceType(string $assetCsvFilename): ?string
     {
         try {
-            $this->io->write('The command will parse your assets file... ');
+            $this->io->write('The command will parse your asset file... ');
             $assetsReader = $this->getReader($assetCsvFilename);
 
             $headers = $assetsReader->getHeaders();
@@ -315,7 +313,7 @@ Allowed values: %s|%s|%s',
     private function guessWithEndOfUse(string $assetCsvFilename): string
     {
         try {
-            $this->io->write('The command will parse your assets file... ');
+            $this->io->write('The command will parse your asset file... ');
             $assetsReader = $this->getReader($assetCsvFilename);
 
             $headers = $assetsReader->getHeaders();
@@ -350,7 +348,7 @@ Allowed values: %s|%s|%s',
     private function guessWithCategories(string $assetCsvFilename): string
     {
         try {
-            $this->io->writeln('The command will parse your assets file...');
+            $this->io->writeln('The command will parse your asset file...');
             $assetsReader = $this->getReader($assetCsvFilename);
 
             $headers = $assetsReader->getHeaders();
@@ -372,13 +370,13 @@ Allowed values: %s|%s|%s',
                 $categories = array_unique(array_merge($categories, $assetCategories));
 
                 if (count($categories) > 1) {
-                    $this->io->writeln('More than 1 category were found in the assets file, you should import them.');
+                    $this->io->writeln('More than 1 category was found in the asset file, you should import them.');
 
                     return self::YES;
                 }
             }
 
-            $this->io->writeln(sprintf('%d category was found in the assets file, you should not import them.', count($categories)));
+            $this->io->writeln(sprintf('%d category was found in the asset file, you should not import them.', count($categories)));
 
             return self::NO;
         } catch (IOException|UnsupportedTypeException|ReaderNotOpenedException $e) {
@@ -412,7 +410,7 @@ Allowed values: %s|%s|%s',
     private function getCategoryCodes(string $assetCsvFilename): array
     {
         try {
-            $this->io->write('The script will now load the categories from your assets file... ');
+            $this->io->write('The script will now load the categories from your asset file... ');
             $assetsReader = $this->getReader($assetCsvFilename);
 
             $headers = $assetsReader->getHeaders();
@@ -444,7 +442,7 @@ Allowed values: %s|%s|%s',
     private function getTags(string $assetCsvFilename): array
     {
         try {
-            $this->io->write('The script will now load the tags from your assets file... ');
+            $this->io->write('The script will now load the tags from your asset file... ');
             $assetsReader = $this->getReader($assetCsvFilename);
 
             $headers = $assetsReader->getHeaders();
@@ -492,10 +490,10 @@ Allowed values: %s|%s|%s',
 
         if (in_array($referenceType, [self::AUTO, null])) {
             if ($referenceType === null) {
-                $this->io->writeln('You did not set the <options=bold>--reference-type</> option.');
+                $this->io->writeln('You did not set the <options=bold>--reference_type</> option.');
                 $this->io->writeln(sprintf('If all your assets are localized, choose <options=bold>%s</>', self::LOCALIZABLE));
                 $this->io->writeln(sprintf('If all your assets are not localized, choose <options=bold>%s</>', self::NON_LOCALIZABLE));
-                $this->io->writeln(sprintf('If you have both localizable and non localizable assets in this family, <options=bold>%s</>', self::BOTH));
+                $this->io->writeln(sprintf('If you have both localizable and non-localizable assets in this family, choose <options=bold>%s</>', self::BOTH));
                 $newReferenceType = $this->guessReferenceType($assetCsvFilename);
                 $referenceType = $this->io->askQuestion(new ChoiceQuestion(
                     'Please pick a value for your reference type',
@@ -505,13 +503,13 @@ Allowed values: %s|%s|%s',
             } else if ($referenceType === self::AUTO) {
                 $referenceType = $this->guessReferenceType($assetCsvFilename);
             }
-            $this->io->writeln(sprintf('The command will be ran with <options=bold>--reference-type=%s</>', $referenceType));
+            $this->io->writeln(sprintf('The command will be run with <options=bold>--reference_type=%s</>', $referenceType));
             $this->io->newLine();
         }
 
         if (in_array($withCategories, [self::AUTO, null])) {
             if ($withCategories === null) {
-                $this->io->writeln('You did not set the <options=bold>--with-categories</> option.');
+                $this->io->writeln('You did not set the <options=bold>--with_categories</> option.');
                 $this->io->writeln('Choose if you want to import the categories into your new Asset family.');
                 $newWithCategory = $this->guessWithCategories($assetCsvFilename);
                 $withCategories = $this->io->askQuestion(new ConfirmationQuestion(
@@ -521,7 +519,7 @@ Allowed values: %s|%s|%s',
             } else if ($withCategories === self::AUTO) {
                 $withCategories = $this->guessWithCategories($assetCsvFilename);
             }
-            $this->io->writeln(sprintf('The command will be ran with <options=bold>--with-categories=%s</>', $withCategories));
+            $this->io->writeln(sprintf('The command will be run with <options=bold>--with_categories=%s</>', $withCategories));
             $this->io->newLine();
         }
 
@@ -529,14 +527,14 @@ Allowed values: %s|%s|%s',
             $categoryCodes = $this->getCategoryCodes($assetCsvFilename);
             if (in_array($convertTagToOption, [self::AUTO, null])) {
                 if ($convertCategoryToOption === null) {
-                    $this->io->writeln('You did not set the <options=bold>--convert-category-to-option</> option.');
+                    $this->io->writeln('You did not set the <options=bold>--convert_category_to_option</> option.');
                     $this->io->writeln('Choose this option if you want to convert your categories to an option field instead of a text field.');
 
                     if (count($categoryCodes) > self::CATEGORY_LIMIT) {
-                        $this->io->writeln(sprintf('More than %s categories were found in the assets file, you should not convert the categories.', self::CATEGORY_LIMIT));
+                        $this->io->writeln(sprintf('More than %s categories was found in the asset file, you should not convert the categories.', self::CATEGORY_LIMIT));
                         $defaultAnswer = false;
                     } else {
-                        $this->io->writeln(sprintf('Less than %s categories were found in the assets file, you should convert the categories in a multiple option field.', self::CATEGORY_LIMIT));
+                        $this->io->writeln(sprintf('Less than %s categories were found in the asset file, you should convert the categories in a multiple option field.', self::CATEGORY_LIMIT));
                         $defaultAnswer = true;
                     }
                     $convertCategoryToOption = $this->io->askQuestion(new ConfirmationQuestion(
@@ -546,7 +544,7 @@ Allowed values: %s|%s|%s',
                 } else if ($convertCategoryToOption === self::AUTO) {
                     $convertCategoryToOption = count($categoryCodes) > self::CATEGORY_LIMIT ? self::NO : self::YES;
                 }
-                $this->io->writeln(sprintf('The command will be ran with <options=bold>--convert-category-to-option=%s</>', $convertCategoryToOption));
+                $this->io->writeln(sprintf('The command will be run with <options=bold>--convert_category_to_option=%s</>', $convertCategoryToOption));
                 $this->io->newLine();
             }
         }
@@ -555,14 +553,14 @@ Allowed values: %s|%s|%s',
             $tags = $this->getTags($assetCsvFilename);
             if (in_array($convertTagToOption, [self::AUTO, null])) {
                 if ($convertTagToOption === null) {
-                    $this->io->writeln('You did not set the <options=bold>--convert-tag-to-option</> option.');
+                    $this->io->writeln('You did not set the <options=bold>--convert_tag_to_option</> option.');
                     $this->io->writeln('Choose this option if you want to convert your tags to an option field instead of a text field.');
 
                     if (count($tags) > self::TAG_LIMIT) {
-                        $this->io->writeln(sprintf('More than %s tags were found in the assets file, you should not convert the tags.', self::TAG_LIMIT));
+                        $this->io->writeln(sprintf('More than %s tags was found in the asset file, you should not convert the tags.', self::TAG_LIMIT));
                         $defaultAnswer = false;
                     } else {
-                        $this->io->writeln(sprintf('Less than %s tags were found in the assets file, you should convert the tags in a multiple option field.', self::TAG_LIMIT));
+                        $this->io->writeln(sprintf('Less than %s tags were found in the asset file, you should convert the tags in a multiple option field.', self::TAG_LIMIT));
                         $defaultAnswer = true;
                     }
                     $convertTagToOption = $this->io->askQuestion(new ConfirmationQuestion(
@@ -572,24 +570,24 @@ Allowed values: %s|%s|%s',
                 } else if ($convertTagToOption === self::AUTO) {
                     $convertTagToOption = count($tags) > self::TAG_LIMIT ? self::NO : self::YES;
                 }
-                $this->io->writeln(sprintf('The command will be ran with <options=bold>--convert-tag-to-option=%s</>', $convertTagToOption));
+                $this->io->writeln(sprintf('The command will be run with <options=bold>--convert_tag_to_option=%s</>', $convertTagToOption));
                 $this->io->newLine();
             }
         }
 
         if (in_array($withEndOfUse, [self::AUTO, null])) {
             if ($withEndOfUse === null) {
-                $this->io->writeln('You did not set the <options=bold>--with-end-of-use</> option.');
-                $this->io->writeln('Choose if you want to import the end of use data into your new Asset family.');
+                $this->io->writeln('You did not set the <options=bold>--with_end_of_use</> option.');
+                $this->io->writeln('Choose if you want to import the end-of-use data into your new Asset family.');
                 $newWithEndOfUse = $this->guessWithEndOfUse($assetCsvFilename);
                 $withEndOfUse = $this->io->askQuestion(new ConfirmationQuestion(
-                    'Do you want to import the end of use data into your new Asset family?',
+                    'Do you want to import the end-of-use data into your new Asset family?',
                     $newWithEndOfUse === self::YES
                 )) ? self::YES : self::NO;
             } else if ($withEndOfUse === self::AUTO) {
                 $withEndOfUse = $this->guessWithEndOfUse($assetCsvFilename);
             }
-            $this->io->writeln(sprintf('The command will be ran with <options=bold>--with-end-of-use=%s</>', $withEndOfUse));
+            $this->io->writeln(sprintf('The command will be run with <options=bold>--with_end_of_use=%s</>', $withEndOfUse));
             $this->io->newLine();
         }
 
@@ -597,16 +595,16 @@ Allowed values: %s|%s|%s',
 
         $createFamilyArguments = [
             $assetFamilyCode,
-            sprintf('--reference-type=%s', $referenceType),
-            sprintf('--with-categories=%s', $withCategories),
-            sprintf('--with-variations=%s', $withVariations),
-            sprintf('--with-end-of-use=%s', $withEndOfUse),
+            sprintf('--reference_type=%s', $referenceType),
+            sprintf('--with_categories=%s', $withCategories),
+            sprintf('--with_variations=%s', $withVariations),
+            sprintf('--with_end_of_use=%s', $withEndOfUse),
         ];
         if ($convertCategoryToOption === self::YES) {
-            $createFamilyArguments[] = sprintf('--category-options=%s', join(',', $categoryCodes));
+            $createFamilyArguments[] = sprintf('--category_options=%s', join(',', $categoryCodes));
         }
         if ($convertTagToOption === self::YES) {
-            $createFamilyArguments[] = sprintf('--tag-options=%s', join(',', $tags));
+            $createFamilyArguments[] = sprintf('--tag_options=%s', join(',', $tags));
         }
         if (null !== $mapping) {
             $createFamilyArguments[] = sprintf('--mapping=%s', $mapping);
@@ -617,10 +615,10 @@ Allowed values: %s|%s|%s',
             $assetCsvFilename,
             $variationsCsvFilename,
             $tmpfname,
-            sprintf('--reference-type=%s', $referenceType),
-            sprintf('--with-categories=%s', $withCategories),
-            sprintf('--with-variations=%s', $withVariations),
-            sprintf('--with-end-of-use=%s', $withEndOfUse),
+            sprintf('--reference_type=%s', $referenceType),
+            sprintf('--with_categories=%s', $withCategories),
+            sprintf('--with_variations=%s', $withVariations),
+            sprintf('--with_end_of_use=%s', $withEndOfUse),
         ];
         if (null !== $mapping) {
             $mergeFileArguments[] = sprintf('--mapping=%s', $mapping);
@@ -634,17 +632,19 @@ Allowed values: %s|%s|%s',
             $this->executeCommand('app:import', [$fileToImport, $assetFamilyCode, '-vvv']);
         }
 
-        if (!empty($this->pimPath)) {
-            $this->executeCommand('pimee:assets:migrate:migrate-asset-category-labels', [
-                sprintf('--env=%s', $_SERVER['APP_ENV']),
-                $assetFamilyCode,
-                sprintf('--categories-attribute-code=%s', $this->fieldNameProvider->get(FieldNameProvider::CATEGORIES))
-            ], $this->pimPath);
-        } else {
-            $this->remainingCommands[] = sprintf('bin/console pimee:assets:migrate:migrate-asset-category-labels %s %s',
-                $assetFamilyCode,
-                sprintf('--categories-attribute-code=%s', $this->fieldNameProvider->get(FieldNameProvider::CATEGORIES))
-            );
+        if ($withCategories) {
+            if (!empty($this->pimPath)) {
+                $this->executeCommand('pimee:assets:migrate:migrate-asset-category-labels', [
+                    sprintf('--env=%s', $_SERVER['APP_ENV']),
+                    $assetFamilyCode,
+                    sprintf('--categories-attribute-code=%s', $this->fieldNameProvider->get(FieldNameProvider::CATEGORIES))
+                ], $this->pimPath);
+            } else {
+                $this->remainingCommands[] = sprintf('bin/console pimee:assets:migrate:migrate-asset-category-labels %s %s',
+                    $assetFamilyCode,
+                    sprintf('--categories-attribute-code=%s', $this->fieldNameProvider->get(FieldNameProvider::CATEGORIES))
+                );
+            }
         }
 
         $this->io->success(sprintf("Family %s successfully imported", $assetFamilyCode));
@@ -686,7 +686,7 @@ Allowed values: %s|%s|%s',
     private function splitAndFill(string $assetCsvFilename): array {
         $files = [];
         try {
-            $this->io->writeln(sprintf('You did not specify "asset-family-code" argument. The script will now split your "%s" file into several files to migrate them.', $assetCsvFilename));
+            $this->io->writeln(sprintf('You did not specify the "asset_family_code" argument. The script will now split your "%s" file into several files to migrate them.', $assetCsvFilename));
             $assetsReader = $this->getReader($assetCsvFilename);
 
             $headers = $assetsReader->getHeaders();
@@ -702,7 +702,7 @@ Allowed values: %s|%s|%s',
                 $assetLine = array_combine($headers, $row);
                 $assetFamilyCode = isset($assetLine['family']) ? $assetLine['family'] : null;
                 if (empty($assetFamilyCode)) {
-                    throw new \RuntimeException(sprintf('The line %d of "%s" does not contain a valid family. You need to fill a column "family" or use the command option "asset-family-code"', $assetLineNumber, $assetCsvFilename));
+                    throw new \RuntimeException(sprintf('The line %d of "%s" does not contain a valid family. You need to fill a column "family" or use the command option "asset_family_code"', $assetLineNumber, $assetCsvFilename));
                 }
 
                 $filename = $this->getFilename($assetCsvFilename, $assetFamilyCode);

@@ -80,10 +80,10 @@ class MergeAssetsAndVariationsFilesCommand extends Command
     {
         $this
             ->setDescription('Merge Assets & Variations CSV files into one')
-            ->addArgument('assets-file-path', InputArgument::REQUIRED, 'Path to the Assets CSV file')
-            ->addArgument('variations-file-path', InputArgument::REQUIRED, 'Path to the Variations CSV file path')
-            ->addArgument('target-file-path', InputArgument::REQUIRED, 'The filePath to the new CSV file to create.')
-            ->addOption('reference-type', null, InputOption::VALUE_OPTIONAL,
+            ->addArgument('assets_file_path', InputArgument::REQUIRED, 'Path to the Assets CSV file')
+            ->addArgument('variations_file_path', InputArgument::REQUIRED, 'Path to the Variations CSV file path')
+            ->addArgument('target_file_path', InputArgument::REQUIRED, 'The filePath to the new CSV file to create.')
+            ->addOption('reference_type', null, InputOption::VALUE_OPTIONAL,
                 sprintf(
                     'Enable if reference is localizable or not. Allowed values: %s|%s|%s.',
                     self::LOCALIZABLE,
@@ -92,21 +92,21 @@ class MergeAssetsAndVariationsFilesCommand extends Command
                 ),
                 self::BOTH
             )
-            ->addOption('with-categories', null, InputOption::VALUE_OPTIONAL,
+            ->addOption('with_categories', null, InputOption::VALUE_OPTIONAL,
                 sprintf('Add a categories column to the merged file or not to import it to the generated assets. Allowed values: %s|%s',
                     self::YES,
                     self::NO
                 ),
                 self::YES
             )
-            ->addOption('with-variations', null, InputOption::VALUE_OPTIONAL,
+            ->addOption('with_variations', null, InputOption::VALUE_OPTIONAL,
                 sprintf('Add the variations to the merged file or not to import it to the generated assets. Allowed values: %s|%s',
                     self::YES,
                     self::NO
                 ),
                 self::YES
             )
-            ->addOption('with-end-of-use', null, InputOption::VALUE_OPTIONAL,
+            ->addOption('with_end_of_use', null, InputOption::VALUE_OPTIONAL,
                 sprintf('Import the end_of_use data or not. Allowed values: %s|%s',
                     self::YES,
                     self::NO
@@ -121,22 +121,22 @@ class MergeAssetsAndVariationsFilesCommand extends Command
     {
         $this->io = new SymfonyStyle($input, $output);
 
-        $assetsFilePath = $input->getArgument('assets-file-path');
-        $variationsFilePath = $input->getArgument('variations-file-path');
-        $targetFilePath = $input->getArgument('target-file-path');
+        $assetsFilePath = $input->getArgument('assets_file_path');
+        $variationsFilePath = $input->getArgument('variations_file_path');
+        $targetFilePath = $input->getArgument('target_file_path');
         $this->variationsFilePath = $variationsFilePath;
 
-        $this->referenceType = $input->getOption('reference-type');
-        ArgumentChecker::assertOptionIsAllowed($this->referenceType, 'reference-type', [self::LOCALIZABLE, self::NON_LOCALIZABLE, self::BOTH]);
+        $this->referenceType = $input->getOption('reference_type');
+        ArgumentChecker::assertOptionIsAllowed($this->referenceType, 'reference_type', [self::LOCALIZABLE, self::NON_LOCALIZABLE, self::BOTH]);
 
-        $this->withCategories = $input->getOption('with-categories');
-        ArgumentChecker::assertOptionIsAllowed($this->withCategories, 'with-categories', [self::YES, self::NO]);
+        $this->withCategories = $input->getOption('with_categories');
+        ArgumentChecker::assertOptionIsAllowed($this->withCategories, 'with_categories', [self::YES, self::NO]);
 
-        $this->withVariations = $input->getOption('with-variations');
-        ArgumentChecker::assertOptionIsAllowed($this->withVariations, 'with-variations', [self::YES, self::NO]);
+        $this->withVariations = $input->getOption('with_variations');
+        ArgumentChecker::assertOptionIsAllowed($this->withVariations, 'with_variations', [self::YES, self::NO]);
 
-        $this->withEndOfUse = $input->getOption('with-end-of-use');
-        ArgumentChecker::assertOptionIsAllowed($this->withEndOfUse, 'with-end-of-use', [self::YES, self::NO]);
+        $this->withEndOfUse = $input->getOption('with_end_of_use');
+        ArgumentChecker::assertOptionIsAllowed($this->withEndOfUse, 'with_end_of_use', [self::YES, self::NO]);
 
         $this->fieldNameProvider = new FieldNameProvider($input->getOption('mapping'));
 
