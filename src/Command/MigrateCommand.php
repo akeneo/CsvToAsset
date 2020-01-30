@@ -600,10 +600,10 @@ Allowed values: %s|%s|%s',
             sprintf('--with_variations=%s', $withVariations),
             sprintf('--with_end_of_use=%s', $withEndOfUse),
         ];
-        if ($convertCategoryToOption === self::YES) {
+        if ($convertCategoryToOption === self::YES && !empty($categoryCodes)) {
             $createFamilyArguments[] = sprintf('--category_options=%s', join(',', $categoryCodes));
         }
-        if ($convertTagToOption === self::YES) {
+        if ($convertTagToOption === self::YES && !empty($tags)) {
             $createFamilyArguments[] = sprintf('--tag_options=%s', join(',', $tags));
         }
         if (null !== $mapping) {
