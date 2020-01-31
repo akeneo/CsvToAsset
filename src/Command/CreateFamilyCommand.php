@@ -120,6 +120,16 @@ class CreateFamilyCommand extends Command
             $categoryOptions = array_filter(explode(',', $categoryOptions), function (string $categoryOption) {
                 return !empty($categoryOption);
             });
+            $numberOfOptions = \count($categoryOptions);
+            if ($numberOfOptions > 100) {
+                $this->io->warning(
+                    sprintf(
+                        'Found %d category options to create, expected less or equal than 100 options.',
+                        $numberOfOptions
+                    )
+                );
+                exit(1);
+            }
         } else {
             $categoryOptions = null;
         }
@@ -129,6 +139,16 @@ class CreateFamilyCommand extends Command
             $tagOptions = array_filter(explode(',', $tagOptions), function (string $tagOption) {
                 return !empty($tagOption);
             });
+            $numberOfOptions = \count($tagOptions);
+            if ($numberOfOptions > 100) {
+                $this->io->warning(
+                    sprintf(
+                        'Found %d tag options to create, expected less or equal than 100 options.',
+                        $numberOfOptions
+                    )
+                );
+                exit(1);
+            }
         } else {
             $tagOptions = null;
         }
