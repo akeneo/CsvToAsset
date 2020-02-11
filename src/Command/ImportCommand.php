@@ -208,7 +208,8 @@ class ImportCommand extends Command
             $this->io->text(
                 'They are either not defined in your PIM for this Asset manager, or their context is not valid (channel or locale unrecognized)'
             );
-
+        }
+        if (count($unsupportedHeaders) > 0) {
             $this->io->title('The following properties are not supported by this tool and will be skipped:');
             $this->io->listing($unsupportedHeaders);
             $this->io->text(
