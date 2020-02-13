@@ -426,7 +426,10 @@ Allowed values: %s|%s|%s',
 
                 $assetLine = array_combine($headers, $row);
                 $assetCategories = explode(',', $assetLine[FieldNameProvider::CATEGORIES]);
-                $categoryCodes = array_unique(array_merge($categoryCodes, $assetCategories));
+                $nonEmptyassetCategoriesCodes = array_filter($assetCategories, function ($assetCategory) {
+                    return !empty($assetCategory);
+                });
+                $categoryCodes = array_unique(array_merge($categoryCodes, $nonEmptyassetCategoriesCodes));
             }
 
             $this->io->writeln(sprintf('%d categories found.', count($categoryCodes)));
@@ -458,7 +461,10 @@ Allowed values: %s|%s|%s',
 
                 $assetLine = array_combine($headers, $row);
                 $assetTags = explode(',', $assetLine[FieldNameProvider::TAGS]);
-                $tags = array_unique(array_merge($tags, $assetTags));
+                $nonEmptyAssetTagCodes = array_filter($assetTags, function ($assetTag) {
+                    return !empty($assetTag);
+                });
+                $tags = array_unique(array_merge($tags, $nonEmptyAssetTagCodes));
                 if (\count($tags) > self::TAG_LIMIT) {
                     break;
                 }
@@ -772,10 +778,11 @@ Allowed values: %s|%s|%s',
         return count($tags) > self::TAG_LIMIT;
     }
 
-    private function hasUnsupportedCharactersToConvertIntoOptions(array $tags): bool
+    private function hasUnsupportedCharactersToConvertIntoOptions(array $codes): bool
     {
-        foreach ($tags as $tag) {
-            if (!preg_match('/^[a-zA-Z0-9_]+$/', $tag)) {
+        foreach ($codes as $tag) {
+            if (!preg_match('/^[a-zA-Z0-9_]+$/', $tag, $match)) {
+                $this->io->warning($match);
                 return true;
             }
         }
