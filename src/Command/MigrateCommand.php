@@ -426,7 +426,10 @@ Allowed values: %s|%s|%s',
 
                 $assetLine = array_combine($headers, $row);
                 $assetCategories = explode(',', $assetLine[FieldNameProvider::CATEGORIES]);
-                $categoryCodes = array_unique(array_merge($categoryCodes, $assetCategories));
+                $nonEmptyassetCategoriesCodes = array_filter($assetCategories, function ($assetCategory) {
+                    return !empty($assetCategory);
+                });
+                $categoryCodes = array_unique(array_merge($categoryCodes, $nonEmptyassetCategoriesCodes));
             }
 
             $this->io->writeln(sprintf('%d categories found.', count($categoryCodes)));
@@ -458,7 +461,10 @@ Allowed values: %s|%s|%s',
 
                 $assetLine = array_combine($headers, $row);
                 $assetTags = explode(',', $assetLine[FieldNameProvider::TAGS]);
-                $tags = array_unique(array_merge($tags, $assetTags));
+                $nonEmptyAssetTagCodes = array_filter($assetTags, function ($assetTag) {
+                    return !empty($assetTag);
+                });
+                $tags = array_unique(array_merge($tags, $nonEmptyAssetTagCodes));
                 if (\count($tags) > self::TAG_LIMIT) {
                     break;
                 }
@@ -533,6 +539,9 @@ Allowed values: %s|%s|%s',
                     if (count($categoryCodes) > self::CATEGORY_LIMIT) {
                         $this->io->writeln(sprintf('More than %s categories was found in the asset file, you should not convert the categories.', self::CATEGORY_LIMIT));
                         $defaultAnswer = false;
+                    } else if ($this->hasUnsupportedCharactersToConvertIntoOptions($categoryCodes)) {
+                        $this->io->writeln('We found category codes with unsupported characters to be converted into an option. The categories will be converted into a text attribute');
+                        $defaultAnswer = false;
                     } else {
                         $this->io->writeln(sprintf('Less than %s categories were found in the asset file, you should convert the categories in a multiple option field.', self::CATEGORY_LIMIT));
                         $defaultAnswer = true;
@@ -542,7 +551,8 @@ Allowed values: %s|%s|%s',
                         $defaultAnswer
                     )) ? self::YES : self::NO;
                 } else if ($convertCategoryToOption === self::AUTO) {
-                    $convertCategoryToOption = count($categoryCodes) > self::CATEGORY_LIMIT ? self::NO : self::YES;
+                    $convertCategoryToOption = count($categoryCodes) > self::CATEGORY_LIMIT || $this->hasUnsupportedCharactersToConvertIntoOptions($categoryCodes)
+                        ? self::NO : self::YES;
                 }
                 $this->io->writeln(sprintf('The command will be run with <options=bold>--convert_category_to_option=%s</>', $convertCategoryToOption));
                 $this->io->newLine();
@@ -556,8 +566,16 @@ Allowed values: %s|%s|%s',
                     $this->io->writeln('You did not set the <options=bold>--convert_tag_to_option</> option.');
                     $this->io->writeln('Choose this option if you want to convert your tags to an option field instead of a text field.');
 
-                    if (count($tags) > self::TAG_LIMIT) {
-                        $this->io->writeln(sprintf('More than %s tags was found in the asset file, you should not convert the tags.', self::TAG_LIMIT));
+                    if ($this->hasTooManyTagsToBeConvertedIntoMultiOptionAttributes($tags)) {
+                        $this->io->writeln(
+                            sprintf(
+                                'More than %s tags was found in the asset file, it\'s not possible to convert the tags.',
+                                self::TAG_LIMIT
+                            )
+                        );
+                        $defaultAnswer = false;
+                    } else if ($this->hasUnsupportedCharactersToConvertIntoOptions($tags)) {
+                        $this->io->writeln('We found tag codes with unsupported characters to be converted into an option. The tags will be converted into a text attribute');
                         $defaultAnswer = false;
                     } else {
                         $this->io->writeln(sprintf('Less than %s tags were found in the asset file, you should convert the tags in a multiple option field.', self::TAG_LIMIT));
@@ -568,7 +586,8 @@ Allowed values: %s|%s|%s',
                         $defaultAnswer
                     )) ? self::YES : self::NO;
                 } else if ($convertTagToOption === self::AUTO) {
-                    $convertTagToOption = count($tags) > self::TAG_LIMIT ? self::NO : self::YES;
+                    $convertTagToOption = $this->hasTooManyTagsToBeConvertedIntoMultiOptionAttributes($tags) || $this->hasUnsupportedCharactersToConvertIntoOptions($tags)
+                        ? self::NO : self::YES;
                 }
                 $this->io->writeln(sprintf('The command will be run with <options=bold>--convert_tag_to_option=%s</>', $convertTagToOption));
                 $this->io->newLine();
@@ -752,5 +771,22 @@ Allowed values: %s|%s|%s',
         }
 
         return $filesToBeImported;
+    }
+
+    private function hasTooManyTagsToBeConvertedIntoMultiOptionAttributes(array $tags): bool
+    {
+        return count($tags) > self::TAG_LIMIT;
+    }
+
+    private function hasUnsupportedCharactersToConvertIntoOptions(array $codes): bool
+    {
+        foreach ($codes as $tag) {
+            if (!preg_match('/^[a-zA-Z0-9_]+$/', $tag, $match)) {
+                $this->io->warning($match);
+                return true;
+            }
+        }
+
+        return false;
     }
 }
