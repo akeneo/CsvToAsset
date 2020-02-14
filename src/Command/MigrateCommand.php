@@ -569,7 +569,7 @@ Allowed values: %s|%s|%s',
                     if ($this->hasTooManyTagsToBeConvertedIntoMultiOptionAttributes($tags)) {
                         $this->io->writeln(
                             sprintf(
-                                'More than %s tags was found in the asset file, you should not convert the tags.',
+                                'More than %s tags was found in the asset file, it\'s not possible to convert the tags.',
                                 self::TAG_LIMIT
                             )
                         );
