@@ -274,17 +274,22 @@ class MergeAssetsAndVariationsFilesCommand extends Command
             }
         }
 
+        // Reference attributes
+        if ($this->referenceType === self::NON_LOCALIZABLE || $this->referenceType === self::BOTH) {
+            $valuesHeaders[] = sprintf('%s', $this->fieldNameProvider->get(FieldNameProvider::REFERENCE));
+        }
+        foreach ($this->locales as $locale) {
+            $valuesHeaders[] = sprintf('%s-%s', $this->fieldNameProvider->get(FieldNameProvider::REFERENCE_LOCALIZABLE), $locale);
+        }
+
+        // Variation attributes
         foreach ($this->channels as $channel) {
-            if ($this->referenceType === self::NON_LOCALIZABLE || $this->referenceType === self::BOTH) {
-                $valuesHeaders[] = sprintf('%s-%s', $this->fieldNameProvider->get(FieldNameProvider::REFERENCE), $channel);
-                if ($this->withVariations === self::YES) {
-                    $valuesHeaders[] = sprintf('%s-%s', $this->fieldNameProvider->get(FieldNameProvider::VARIATION_SCOPABLE), $channel);
-                }
+            if ($this->withVariations === self::YES) {
+                $valuesHeaders[] = sprintf('%s-%s', $this->fieldNameProvider->get(FieldNameProvider::VARIATION_SCOPABLE), $channel);
             }
 
             if ($this->referenceType === self::LOCALIZABLE || $this->referenceType === self::BOTH) {
                 foreach ($this->locales as $locale) {
-                    $valuesHeaders[] = sprintf('%s-%s-%s', $this->fieldNameProvider->get(FieldNameProvider::REFERENCE_LOCALIZABLE), $locale, $channel);
                     if ($this->withVariations === self::YES) {
                         $valuesHeaders[] = sprintf('%s-%s-%s', $this->fieldNameProvider->get(FieldNameProvider::VARIATION_LOCALIZABLE_SCOPABLE), $locale, $channel);
                     }
@@ -338,7 +343,7 @@ class MergeAssetsAndVariationsFilesCommand extends Command
         foreach ($variations as $variation) {
             if (!empty($variation['locale'])) {
                 if ($this->referenceType === self::LOCALIZABLE || $this->referenceType === self::BOTH) {
-                    $mappedStructure[sprintf('%s-%s-%s', $this->fieldNameProvider->get(FieldNameProvider::REFERENCE_LOCALIZABLE), $variation['locale'], $variation['channel'])] = $variation['reference_file'];
+                    $mappedStructure[sprintf('%s-%s', $this->fieldNameProvider->get(FieldNameProvider::REFERENCE_LOCALIZABLE), $variation['locale'])] = $variation['reference_file'];
                     if ($this->withVariations === self::YES) {
                         $mappedStructure[sprintf('%s-%s-%s', $this->fieldNameProvider->get(FieldNameProvider::VARIATION_LOCALIZABLE_SCOPABLE), $variation['locale'], $variation['channel'])] = $variation['variation_file'];
                     }
@@ -352,16 +357,18 @@ class MergeAssetsAndVariationsFilesCommand extends Command
                 }
             } else {
                 if ($this->referenceType === self::NON_LOCALIZABLE || $this->referenceType === self::BOTH) {
-                    $mappedStructure[sprintf('%s-%s', $this->fieldNameProvider->get(FieldNameProvider::REFERENCE), $variation['channel'])] = $variation['reference_file'];
+                    $mappedStructure[sprintf('%s', $this->fieldNameProvider->get(FieldNameProvider::REFERENCE))] = $variation['reference_file'];
                     if ($this->withVariations === self::YES) {
                         $mappedStructure[sprintf('%s-%s', $this->fieldNameProvider->get(FieldNameProvider::VARIATION_SCOPABLE), $variation['channel'])] = $variation['variation_file'];
                     }
                 } else {
-                    throw new \RuntimeException(sprintf(
-                        "The merge script encountered an issue with \"%s\".
+                    throw new \RuntimeException(
+                        sprintf(
+                            "The merge script encountered an issue with \"%s\".
                         \nThis line does not contains any value in the locale column, but this value is needed for the asset family.",
-                        json_encode($variation)
-                    ));
+                            json_encode($variation)
+                        )
+                    );
                 }
             }
         }

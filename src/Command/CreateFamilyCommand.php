@@ -255,7 +255,7 @@ class CreateFamilyCommand extends Command
 
     private function createNonLocalizableAttributes(string $withVariations): void
     {
-        $this->createAttribute($this->fieldNameProvider->get(FieldNameProvider::REFERENCE), 'media_file', false, true, false);
+        $this->createAttribute($this->fieldNameProvider->get(FieldNameProvider::REFERENCE), 'media_file', false, false, false);
         if ($withVariations === self::YES) {
             $this->createAttribute($this->fieldNameProvider->get(FieldNameProvider::VARIATION_SCOPABLE), 'media_file', false, true, false);
         } else {
@@ -265,7 +265,7 @@ class CreateFamilyCommand extends Command
 
     private function createLocalizableAttributes(string $withVariations): void
     {
-        $this->createAttribute($this->fieldNameProvider->get(FieldNameProvider::REFERENCE_LOCALIZABLE), 'media_file', true, true, false);
+        $this->createAttribute($this->fieldNameProvider->get(FieldNameProvider::REFERENCE_LOCALIZABLE), 'media_file', true, false, false);
         if ($withVariations === self::YES) {
             $this->createAttribute($this->fieldNameProvider->get(FieldNameProvider::VARIATION_LOCALIZABLE_SCOPABLE), 'media_file', true, true, false);
         } else {
