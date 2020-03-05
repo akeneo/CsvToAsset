@@ -274,17 +274,22 @@ class MergeAssetsAndVariationsFilesCommand extends Command
             }
         }
 
+        // Reference attributes
+        if ($this->referenceType === self::NON_LOCALIZABLE || $this->referenceType === self::BOTH) {
+            $valuesHeaders[] = sprintf('%s', $this->fieldNameProvider->get(FieldNameProvider::REFERENCE));
+        }
+        foreach ($this->locales as $locale) {
+            $valuesHeaders[] = sprintf('%s-%s', $this->fieldNameProvider->get(FieldNameProvider::REFERENCE_LOCALIZABLE), $locale);
+        }
+
+        // Variation attributes
         foreach ($this->channels as $channel) {
-            if ($this->referenceType === self::NON_LOCALIZABLE || $this->referenceType === self::BOTH) {
-                $valuesHeaders[] = sprintf('%s', $this->fieldNameProvider->get(FieldNameProvider::REFERENCE));
-                if ($this->withVariations === self::YES) {
-                    $valuesHeaders[] = sprintf('%s-%s', $this->fieldNameProvider->get(FieldNameProvider::VARIATION_SCOPABLE), $channel);
-                }
+            if ($this->withVariations === self::YES) {
+                $valuesHeaders[] = sprintf('%s-%s', $this->fieldNameProvider->get(FieldNameProvider::VARIATION_SCOPABLE), $channel);
             }
 
             if ($this->referenceType === self::LOCALIZABLE || $this->referenceType === self::BOTH) {
                 foreach ($this->locales as $locale) {
-                    $valuesHeaders[] = sprintf('%s-%s', $this->fieldNameProvider->get(FieldNameProvider::REFERENCE_LOCALIZABLE), $locale);
                     if ($this->withVariations === self::YES) {
                         $valuesHeaders[] = sprintf('%s-%s-%s', $this->fieldNameProvider->get(FieldNameProvider::VARIATION_LOCALIZABLE_SCOPABLE), $locale, $channel);
                     }
