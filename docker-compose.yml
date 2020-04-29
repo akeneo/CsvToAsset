@@ -1,7 +1,7 @@
 version: '3.4'
 services:
   php:
-    image: 'akeneo/pim-dev/php:7.3'
+    image: 'akeneo/pim-php-dev:4.0'
     environment:
       APP_ENV: '${APP_ENV:-prod}'
       COMPOSER_HOME: '/var/www/.composer'
