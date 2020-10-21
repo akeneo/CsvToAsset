@@ -23,6 +23,12 @@ class TextAttributeConverterSpec extends ObjectBehavior
         $this->support($attribute)->shouldReturn(true);
     }
 
+    function it_also_supports_media_links_attribute()
+    {
+        $attribute = ['type' => 'media_link'];
+        $this->support($attribute)->shouldReturn(true);
+    }
+
     function it_converts_data_for_a_specific_attribute()
     {
         $attribute = ['type' => 'text'];
