@@ -40,6 +40,14 @@ Then open `.env` to define the needed configuration vars:
 - `APP_ENV` refers to the `APP_ENV` of your PIM Enterprise Edition, used for direct bask calls.
    Set it to `prod`, `prod_onprem_paas`...
 
+You also need to create a `credentials` file at the root of this project. This API credentials file needs to contain the following information : `clientId`, `secret`, `username`, `password`. The format of the file is the given in the example below :
+```
+on this line put my API client ID
+on this line put my API secret
+on this line put my API username
+on this line put my API password
+```
+
 ## Docker setup
 
 First, you have to update your Enterprise Edition `docker-compose.yml` file to allow external data from network.
