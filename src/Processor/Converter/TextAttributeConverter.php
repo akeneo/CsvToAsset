@@ -18,7 +18,7 @@ class TextAttributeConverter implements DataConverterInterface
      */
     public function support(array $attribute): bool
     {
-        return isset($attribute['type']) && 'text' === $attribute['type'];
+        return isset($attribute['type']) && ('text' === $attribute['type'] || 'media_link' === $attribute['type']);
     }
 
     /**
